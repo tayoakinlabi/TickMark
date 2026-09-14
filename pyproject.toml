@@ -1,0 +1,58 @@
+[project]
+name = "tickmark"
+version = "0.1.0"
+description = "Spreadsheet auditor — finds inconsistent formulas, hardcoded constants, broken links and silent errors in Excel workbooks."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Tickmark contributors" }]
+keywords = ["excel", "xlsx", "audit", "spreadsheet", "formula"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Spreadsheet",
+]
+
+# openpyxl is the only hard dependency: it provides both OOXML reading and the
+# formula tokenizer (T3). See 04-tickmark.md section 9.
+dependencies = [
+    "openpyxl>=3.1.5",
+]
+
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.115",
+    "uvicorn>=0.34",
+]
+
+[project.scripts]
+tickmark = "tickmark.cli.main:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tickmark"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

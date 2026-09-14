@@ -1,0 +1,10 @@
+# Normalise line endings in the repository to LF, whatever the contributor's OS.
+# Windows-first development (G2) plus contributors on other platforms otherwise
+# produces diffs where every line has changed and nothing has.
+* text=auto eol=lf
+
+# Binary fixtures must never be line-ending converted — it corrupts them.
+*.xlsx binary
+*.xlsm binary
+*.png binary
+*.ico binary

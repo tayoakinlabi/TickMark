@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build / packaging
+build/
+dist/
+*.spec.bak
+
+# Tickmark output — reports are written wherever the user asks; never commit them
+*.tickmark.html
+/reports/
+
+# Test fixtures generated at runtime
+/tests/_generated/
+
+# OS
+Thumbs.db
+desktop.ini
