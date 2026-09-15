@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Is this a deliberate limit rather than a bug?
+    url: https://github.com/tayoakinlabi/TickMark#what-it-will-not-do
+    about: Tickmark will not evaluate most formulas, read .xlsb or Google Sheets, parse VBA, or write to your workbooks. Those are permanent, and the README says why.
+  - name: How much did it actually verify?
+    url: https://github.com/tayoakinlabi/TickMark#what-gets-recomputed
+    about: Every audit reports its own coverage. "No findings" is not the same as "correct", and an unverified formula has not been checked.

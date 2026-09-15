@@ -1,0 +1,55 @@
+name: It would not run
+description: A crash, a file it could not open, or the installer or browser page failing
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One unreadable file in a folder of two hundred is supposed to be
+        reported and skipped, never fatal. If a single workbook stopped the
+        whole run, that is a bug regardless of what was wrong with the file.
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it go wrong?
+      options:
+        - Running an audit from the command line
+        - The browser interface (--serve)
+        - Installing, or the SmartScreen warning
+        - Verifying the published checksum
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: What did you run?
+      render: shell
+      placeholder: tickmark "C:\Shared\Finance" -r
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: What came back?
+      description: The whole message, including any traceback. No need to trim it.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: tickmark 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Press Win+R, type `winver`, and copy the line it shows.
+      placeholder: Windows 11 Home 24H2

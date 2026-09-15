@@ -307,6 +307,16 @@ release history exists — that history is a prerequisite for the free
 open-source certificate programme, which is why it comes in this order rather
 than the other way round.
 
+## Something wrong?
+
+[Open an issue.](../../issues/new/choose) The most valuable reports are the ones
+where a finding is wrong — a check that flags correct work loses trust faster
+than one that quietly misses things, so a false positive is the failure mode
+these checks are designed around, not a minor annoyance.
+
+Please do not attach a workbook with real figures in it. A few cells typed into
+a fresh file, reproducing the same shape, is more useful and costs you nothing.
+
 ## Licence
 
 Apache-2.0. See [LICENSE](LICENSE).

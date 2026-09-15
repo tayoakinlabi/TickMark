@@ -1,0 +1,80 @@
+name: A finding looks wrong
+description: Tickmark reported something that is not a problem, or missed one that is
+labels: ["finding"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These are the most valuable reports this project gets.
+
+        A tool that flags correct work loses trust faster than one that quietly
+        misses things — so a false positive is not a minor annoyance here, it is
+        the failure mode the checks are designed around. And a miss on a real
+        error is the thing the tool exists to prevent.
+
+        **Please do not attach a workbook with real figures in it.** A few cells
+        typed into a fresh file, reproducing the same shape, is more useful and
+        costs you nothing to share.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Which is it?
+      options:
+        - It flagged something that is actually fine (false positive)
+        - It missed something that is actually wrong (false negative)
+        - The finding is right but the wording is confusing or misleading
+    validations:
+      required: true
+
+  - type: input
+    id: check
+    attributes:
+      label: Which check?
+      description: The name in the report, e.g. `inconsistent-range`, `short-range`, `stale-value`.
+      placeholder: inconsistent-range
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: What does the sheet look like?
+      description: |
+        The layout matters more than the numbers. Which cells hold formulas,
+        which hold constants, where the headers and totals are.
+      placeholder: |
+        A1:C1  headers ("Item", "Net", "VAT")
+        C2:C21 all =B{row}*1.075
+        C11    someone typed 999 over the formula
+        E1     =TODAY()
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, and what happened?
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From `tickmark --version`, or the installer you ran.
+      placeholder: tickmark 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: format
+    attributes:
+      label: File format
+      description: The two are read by entirely separate code, so this narrows it a lot.
+      options:
+        - .xlsx (or .xlsm / .xltx / .xltm)
+        - .xls (the legacy Excel 97-2003 format)
+        - Both, the same way
+    validations:
+      required: true
