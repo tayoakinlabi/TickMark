@@ -28,11 +28,10 @@ dependencies = [
     "olefile>=0.47",
 ]
 
-[project.optional-dependencies]
-server = [
-    "fastapi>=0.115",
-    "uvicorn>=0.34",
-]
+# No optional extras. A 'server' extra pulling FastAPI and uvicorn was declared
+# here before the local-server UI (item 12) existed; installing two dependencies
+# that nothing imports is a promise the package does not keep. It comes back with
+# the code that needs it.
 
 [project.scripts]
 tickmark = "tickmark.cli.main:main"

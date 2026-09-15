@@ -1,0 +1,61 @@
+name: CI
+
+# Windows only, deliberately. G2 makes this a Windows-first product: PyInstaller
+# cannot cross-compile, the installer is Windows, and the CLI carries
+# Windows-specific handling for legacy console codepages. A green tick on a
+# platform nobody ships to would be reassurance rather than evidence.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A newer push makes an in-flight run irrelevant; don't pay for both.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Test
+        run: uv run pytest -q
+
+      - name: Audit a real workbook end to end
+        # The suite exercises the engine; this proves the installed console
+        # script still works, which is what users actually invoke. Exit code 1
+        # means findings were reported and is the expected result for this
+        # fixture — only 2, "nothing could be audited", is a failure.
+        shell: bash
+        run: |
+          # `|| status=$?` rather than a bare call: Actions runs bash with -e,
+          # and this command exits 1 by design when it finds something.
+          status=0
+          uv run tickmark tests/fixtures/excel_authored.xls --no-report -q || status=$?
+          echo "exit code: $status"
+          if [ "$status" = "2" ]; then
+            echo "::error::the CLI could not audit the legacy fixture"
+            exit 1
+          fi

@@ -1,0 +1,94 @@
+name: Release
+
+# Builds the release artefacts from a tag and attaches them to the GitHub
+# release. The point is not convenience: G3's signing path depends on a public
+# release history, and a history is worth more when every entry was produced the
+# same way from a known commit than when it was built by hand on somebody's
+# laptop. A signing step slots in here later without changing anything else.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and upload (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write # needed to upload assets to the release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Test before building
+        # Never ship a tag that does not pass its own suite. Cheap here,
+        # expensive to discover from a user's bug report.
+        run: uv run pytest -q
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build executable, checksums and installer
+        run: uv run --with pyinstaller python packaging/build.py
+
+      - name: Verify the artefacts exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${version#v}"
+          for f in \
+            "dist/tickmark.exe" \
+            "dist/tickmark.exe.sha256" \
+            "dist/tickmark-${version}-setup.exe" \
+            "dist/tickmark-${version}-setup.exe.sha256"; do
+            test -f "$f" || { echo "::error::missing artefact $f"; exit 1; }
+          done
+          ls -la dist/
+
+      - name: Check the tag matches the packaged version
+        # A tag that disagrees with the version inside the binary produces a
+        # release nobody can reason about afterwards.
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          packaged="$(./dist/tickmark.exe --version | awk '{print $2}')"
+          if [ "v${packaged}" != "$tag" ]; then
+            echo "::error::tag $tag does not match packaged version v${packaged}"
+            exit 1
+          fi
+          echo "tag $tag matches packaged version"
+
+      - name: Build the release notes from CHANGELOG.md
+        # One source of truth. Notes typed into the GitHub UI drift from the
+        # changelog in the repo, and afterwards nobody can tell which described
+        # the build. Fails the run if the version has no section, so a release
+        # cannot go out with an empty body by accident.
+        run: uv run python packaging/release_notes.py "${{ github.event.inputs.tag || github.ref_name }}" --out release-notes.md
+
+      - name: Upload to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          body_path: release-notes.md
+          files: |
+            dist/tickmark.exe
+            dist/tickmark.exe.sha256
+            dist/tickmark-*-setup.exe
+            dist/tickmark-*-setup.exe.sha256
+          fail_on_unmatched_files: true
