@@ -4,6 +4,39 @@ Notable changes to Tickmark. Versions follow [semantic versioning](https://semve
 while the major version is `0`, the command-line interface may still change between
 minor releases.
 
+## 0.2.1
+
+**Fixes an installation that would not open.** If you installed 0.2.0, please
+replace it — the Start menu shortcut did not work.
+
+### Clicking Tickmark did nothing
+
+The installer's Start menu entry ran Tickmark with no arguments. With no
+arguments it printed command-line usage and exited, so Windows closed the
+console it had just created — and anyone clicking the shortcut saw a box flash
+and vanish, or nothing at all.
+
+The shortcut now opens the browser interface, which is what clicking a program
+should do. Double-clicking `tickmark.exe` directly does the same. Run from a
+terminal with no arguments it still prints usage, as a command should.
+
+### A misleading message on the Browse button
+
+The browser interface reported "Could not open a folder window" for a failure
+that actually means Tickmark itself is no longer running — if the window that
+started it has been closed, for instance. It now says that, instead of sending
+you to look at the folder dialog.
+
+### Also in this release
+
+The browser interface gained a **Browse** button in 0.2.0's line of work: a real
+Windows folder chooser, opened by Tickmark on your own machine. A web page
+cannot be given a folder path by any means the browser provides, so the only
+alternatives were typing one or this.
+
+Nothing changed in the audit engine. Findings, coverage and reports are
+identical to 0.2.0.
+
 ## 0.2.0
 
 A browser interface, house rules you can write yourself, and a fix for something

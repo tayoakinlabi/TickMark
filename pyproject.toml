@@ -1,6 +1,6 @@
 [project]
 name = "tickmark"
-version = "0.2.0"
+version = "0.2.1"
 description = "Spreadsheet auditor — finds inconsistent formulas, hardcoded constants, broken links and silent errors in Excel workbooks."
 readme = "README.md"
 requires-python = ">=3.12"

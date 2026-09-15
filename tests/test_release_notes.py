@@ -98,12 +98,19 @@ class TestAgainstTheRealChangelog:
 
         body = extract(CHANGELOG.read_text(encoding="utf-8"), __version__)
         assert len(body) > 200
-        # The honesty line is the one thing these notes must never lose.
-        #
-        # Whitespace is collapsed first. The changelog is hard-wrapped prose, so
-        # a phrase straddling a line break is invisible to a plain substring
-        # test — which is a property of the paragraph's width, not of whether
-        # the sentence is there. Asserting on the raw text made reflowing a
-        # paragraph a test failure.
-        flattened = " ".join(body.split())
+
+    def test_the_honesty_line_survives_somewhere_in_the_changelog(self):
+        """The coverage claim must stay on the record — but not in every entry.
+
+        This used to require the line in the *current* version's notes, which
+        was right while every release was a feature release and wrong the moment
+        one was a bugfix: it would have forced a sentence about verification
+        into a patch note about a broken shortcut, which is padding, not honesty.
+
+        Whitespace is collapsed first. The changelog is hard-wrapped prose, so a
+        phrase straddling a line break is invisible to a plain substring test —
+        a property of the paragraph's width, not of whether the sentence is
+        there.
+        """
+        flattened = " ".join(CHANGELOG.read_text(encoding="utf-8").split())
         assert "not a formula that passed" in flattened
