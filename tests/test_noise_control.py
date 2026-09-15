@@ -69,6 +69,54 @@ class TestHeaderRowsAndInputColumns:
         assert [f.coordinate for f in found] == ["C7"]
         assert found[0].severity is Severity.HIGH
 
+    def test_a_formula_in_the_header_row_does_not_unmask_the_headers(self, tmp_path: Path):
+        """Regression: one `=TODAY()` beside the headings blinded the veto.
+
+        `header_rows` used to disqualify a row the moment it held any formula at
+        all. A report date in the header band — about as common as spreadsheets
+        get — therefore emptied the header set, and *every* text heading above a
+        formula column came back as "Constant in a column of formulas" at HIGH
+        severity, on a workbook with nothing wrong with it.
+
+        Found by auditing an Excel-authored file; no openpyxl-written fixture in
+        this suite reproduced it, because none of them put a formula in row 1.
+        """
+        path = invoice_sheet(tmp_path, planted={"F1": "=TODAY()"})
+        with open_workbook(path) as wb:
+            found = InconsistentRangeCheck().run(wb.sheets[0])
+        assert [f.coordinate for f in found] == []
+
+    def test_headers_survive_a_formula_but_a_bug_beneath_them_does_not(self, tmp_path: Path):
+        # The veto must not become a blanket: the same sheet with a genuinely
+        # overwritten cell still has to report it, and only it.
+        path = invoice_sheet(tmp_path, planted={"F1": "=TODAY()", "C7": 148.0})
+        with open_workbook(path) as wb:
+            found = InconsistentRangeCheck().run(wb.sheets[0])
+        assert [f.coordinate for f in found] == ["C7"]
+
+    def test_a_narrow_label_formula_row_is_not_treated_as_a_header(self, tmp_path: Path):
+        """The case that stops the formula test being "ignore formulas entirely".
+
+        Two cells wide, so overwriting the formula leaves one label beside one
+        constant — a row that is text-dominant by any measure. If text alone made
+        it a header, the best finding the product makes would be vetoed. Formulas
+        must be a strict minority, and one of two is not.
+        """
+        wb = Workbook()
+        ws = wb.active
+        for row in range(1, 9):
+            ws[f"A{row}"] = f"row {row}"
+            ws[f"B{row}"] = f"=C{row}*2"
+            ws[f"C{row}"] = row
+        ws["B4"] = 99  # typed over
+        path = tmp_path / "narrow.xlsx"
+        wb.save(path)
+
+        with open_workbook(path) as book:
+            found = InconsistentRangeCheck().run(book.sheets[0])
+        assert [f.coordinate for f in found] == ["B4"]
+        assert found[0].severity is Severity.HIGH
+
     def test_multi_row_headers_are_handled(self, tmp_path: Path):
         wb = Workbook()
         ws = wb.active

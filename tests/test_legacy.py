@@ -158,6 +158,17 @@ class TestExcelAuthored:
             for f in findings
         )
 
+    def test_the_text_headers_are_not_reported_as_overwritten_formulas(self):
+        # This fixture is what exposed the header_rows bug: it carries =TODAY()
+        # in row 1 beside three text headings, which used to disqualify the whole
+        # header band and report every heading at HIGH. Anchored here as well as
+        # in test_noise_control because an Excel-authored file is what caught it.
+        with open_workbook(EXCEL_XLS) as wb:
+            findings = run_audit(wb).findings
+        assert [
+            f.location for f in findings if f.check == "inconsistent-range" and f.row == 1
+        ] == []
+
     def test_broken_reference_survives_decompilation(self):
         with open_workbook(EXCEL_XLS) as wb:
             formulas = {c.coordinate: c.formula for c in wb.sheet("Broken").formulas()}

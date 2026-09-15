@@ -48,31 +48,52 @@ def input_columns(cells: CellMap) -> set[int]:
 def header_rows(cells: CellMap) -> set[int]:
     """The band of label rows at the top of the used range.
 
-    A header row must be both **formula-free** and **text-dominant**. The second
-    condition is not decoration: without it, a column of numbers with a single
-    ``=SUM`` at the bottom classifies every data row above the total as a header,
-    because none of them contains a formula either. That is the commonest layout
-    in any accounts workbook, so a definition that mislabels it is wrong about
-    the ordinary case rather than an edge case.
+    A header row must be **text-dominant** and **not formula-dominant**: at least
+    half its filled cells hold text, and fewer than half hold formulas.
+
+    Text-dominance is not decoration. Without it, a column of numbers with a
+    single ``=SUM`` at the bottom classifies every data row above the total as a
+    header, because none of them contains a formula either. That is the
+    commonest layout in any accounts workbook, so a definition that mislabels it
+    is wrong about the ordinary case rather than an edge case.
+
+    The formula condition is a *minority* test rather than the absence test it
+    used to be, and the difference is a real bug rather than a refinement. A
+    header band very often carries one formula — a report date in ``=TODAY()``,
+    a title assembled with ``&``, a cross-reference to another sheet. Under the
+    old rule that single formula disqualified the whole row, the header band came
+    back empty, and every text heading sitting above a column of formulas was
+    reported as an overwritten constant at HIGH severity. On a correct workbook.
+    That is the precise failure mode check 1 cannot afford, since its value
+    depends entirely on being believed.
+
+    Why a *minority* rather than simply ignoring formulas: in a narrow
+    ``label | formula`` sheet, a row is two cells wide, and overwriting the
+    formula is exactly what leaves one label beside one constant. Such a row is
+    text-dominant by any measure, so text alone would veto the best finding the
+    product makes. Requiring formulas to be a strict minority keeps a two-cell
+    ``label | =formula`` row out of the header band, where it belongs.
 
     Multi-row headers are handled by walking down until the first row that
     breaks either condition.
     """
-    has_formula: dict[int, bool] = {}
+    formula_cells: dict[int, int] = {}
     text_cells: dict[int, int] = {}
     filled: dict[int, int] = {}
 
     for (row, _column), cell in cells.items():
-        has_formula[row] = has_formula.get(row, False) or cell.is_formula
         filled[row] = filled.get(row, 0) + 1
-        if isinstance(cell.value, str) and cell.value.strip():
+        if cell.is_formula:
+            formula_cells[row] = formula_cells.get(row, 0) + 1
+        elif isinstance(cell.value, str) and cell.value.strip():
             text_cells[row] = text_cells.get(row, 0) + 1
 
     header: set[int] = set()
-    for row in sorted(has_formula):
-        if has_formula[row]:
+    for row in sorted(filled):
+        width = filled[row]
+        if formula_cells.get(row, 0) * 2 >= width:
             break
-        if text_cells.get(row, 0) * 2 < filled.get(row, 0):
+        if text_cells.get(row, 0) * 2 < width:
             break
         header.add(row)
     return header
