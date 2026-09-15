@@ -12,10 +12,24 @@ Only Excel can write these. A reference into another workbook is not stored as
 text in the formula; it is an index into a table of files (``SUPBOOK`` and
 ``EXTERNSHEET`` in BIFF), and ``xlwt`` has no notion of that table at all.
 
-The link is deliberately written to a file in the *same directory*, because that
-is what makes Excel store a relative path — which is in turn what lets a test
-copy the pair into a scratch directory and have the link still resolve, or copy
-only the linking workbook and have it correctly resolve to nothing.
+**The two formats do not store the target the same way, and cannot be made to.**
+Saving the identical workbook both ways, Excel writes a path *relative* to the
+linking file in the `.xls` and an *absolute* `file:///` URL in the `.xlsx`. That
+is Excel's behaviour, not a property of how the link is written here: it holds
+whether the formula names the target by bare workbook name or with a full
+directory prefix. Both were tried.
+
+Two consequences, both recorded because they cost time to learn:
+
+* The committed `.xlsx` carries the absolute path of the machine that generated
+  it. A test asserting that both formats reach the same *severity* therefore
+  passes only on that machine, because severity depends on whether the target
+  resolves. The parity test now compares where the links are found, which is
+  what the two backends are actually responsible for.
+* This is a real difference users will meet. The same workbook saved both ways,
+  then moved to another machine, legitimately reports "external link" from the
+  `.xls` and "external link to a file that is not there" from the `.xlsx`.
+  Tickmark reports what is stored; what is stored differs.
 """
 
 from __future__ import annotations
@@ -51,7 +65,9 @@ def main(directory: str) -> int:
         book.SaveAs(source, FileFormat=_XL_EXCEL_8)
         print(f"wrote {source}")
 
-        link = f"'{os.path.dirname(source)}\\[source_book.xls]Rates'!"
+        # Bare workbook name, no directory prefix: see the module docstring for
+        # why a prefix here bakes this machine's path into the committed fixture.
+        link = "'[source_book.xls]Rates'!"
         for suffix, file_format in ((".xls", _XL_EXCEL_8), (".xlsx", _XL_OPEN_XML_WORKBOOK)):
             target = _windows_path(directory, "external_link" + suffix)
             if os.path.exists(target):

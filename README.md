@@ -204,10 +204,17 @@ reported as failures.
 
 **Legacy `.xls` files are read natively** — no conversion step, no Excel
 required. The two formats are held to a parity test: the same workbook saved in
-both must produce identical findings. Two things are weaker on the old format:
-external links are reported but not resolved to a file on disk, and a `.xls`
-that is really an HTML or CSV export wearing the extension is refused with a
-message saying so rather than a parse error.
+both must produce the same findings, in the same cells.
+
+There is one place they legitimately differ, and it is Excel's doing rather than
+Tickmark's. A link to another workbook is stored as a path *relative* to the
+linking file in a `.xls`, and as an *absolute* path in a `.xlsx`. So the same
+workbook, saved both ways and then moved to another machine, can report the link
+as fine from one and as pointing at a missing file from the other. Tickmark
+reports what the file stores; what the file stores differs.
+
+A `.xls` that is really an HTML or CSV export wearing the extension is refused
+with a message saying so rather than a parse error.
 
 Exit codes suit a scheduled job or a pre-commit hook: `0` nothing at or above the
 threshold, `1` findings at or above it (`--fail-on high|medium|low|info|never`,

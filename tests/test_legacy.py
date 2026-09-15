@@ -254,22 +254,56 @@ class TestExternalLinks:
             found = [f for f in run_audit(wb).findings if f.check == "external-link"]
         assert found and all(f.severity.value == "high" for f in found)
 
-    def test_both_formats_agree(self, tmp_path: Path):
-        """Parity again, on the axis that was broken.
+    def _links(self, path: Path):
+        with open_workbook(path) as wb:
+            return [f for f in run_audit(wb).findings if f.check == "external-link"]
 
-        The two files store the target differently — the .xlsx keeps an absolute
-        file:// URL, the .xls a path relative to itself — so this asserts the
-        *finding*, which is what a reader acts on, rather than the stored text.
+    def test_both_formats_find_the_link_in_the_same_places(self, tmp_path: Path):
+        """The parity that the two backends are actually responsible for.
+
+        Severity is deliberately *not* compared here, and the first version of
+        this test compared it and was wrong to. Excel stores the target
+        differently in the two formats — a relative path in the .xls, an
+        absolute file:// URL in the .xlsx — so whether it resolves depends on
+        where the file has been since it was written, not on which backend read
+        it. Asserting severity parity asserted something untrue, and it passed
+        locally only because the committed .xlsx names a directory that happens
+        to exist on the machine that generated it. CI is where it showed.
+
+        What must match is that both backends see the same references in the
+        same cells. That is the thing that was genuinely broken before: the .xls
+        path found none at all.
         """
         _copy(tmp_path, "external_link.xls", "external_link.xlsx", "source_book.xls")
 
-        def fingerprint(name: str):
-            with open_workbook(tmp_path / name) as wb:
-                return sorted(
-                    (f.check, f.sheet, f.row, f.column, f.severity.value, f.summary)
-                    for f in run_audit(wb).findings
-                    if f.check == "external-link"
-                )
+        def places(name: str):
+            return sorted((f.check, f.sheet, f.row, f.column) for f in self._links(tmp_path / name))
 
-        assert fingerprint("external_link.xls") == fingerprint("external_link.xlsx")
-        assert len(fingerprint("external_link.xls")) == 2
+        assert places("external_link.xls") == places("external_link.xlsx")
+        assert len(places("external_link.xls")) == 2
+
+    def test_both_formats_name_the_same_target_file(self, tmp_path: Path):
+        # The stored spelling differs; the file being pointed at does not.
+        _copy(tmp_path, "external_link.xls", "external_link.xlsx", "source_book.xls")
+        for name in ("external_link.xls", "external_link.xlsx"):
+            with open_workbook(tmp_path / name) as wb:
+                targets = list(wb.external_links.values())
+            assert targets, f"{name} found no external link at all"
+            assert all(t.lower().endswith("source_book.xls") for t in targets), targets
+
+    def test_the_formats_store_the_path_differently_on_purpose(self, tmp_path: Path):
+        """Pins the asymmetry, so it cannot surprise anyone a second time.
+
+        Users meet this: the same workbook saved both ways and then moved
+        reports the link as fine from the .xls and as missing from the .xlsx.
+        Tickmark reports what is stored, and what is stored differs.
+        """
+        _copy(tmp_path, "external_link.xls", "external_link.xlsx", "source_book.xls")
+
+        with open_workbook(tmp_path / "external_link.xls") as wb:
+            legacy = next(iter(wb.external_links.values()))
+        with open_workbook(tmp_path / "external_link.xlsx") as wb:
+            modern = next(iter(wb.external_links.values()))
+
+        assert not Path(legacy).is_absolute(), "the .xls used to store a relative path"
+        assert modern.startswith("file:///"), "the .xlsx used to store an absolute URL"

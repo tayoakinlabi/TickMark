@@ -56,6 +56,13 @@ placeholders. Otherwise the text is left alone. Naming the wrong file would be
 worse than naming none, because check 4 reports whether the target resolves and
 a confident pointer at an unrelated workbook turns a useful finding into a
 misleading one.
+
+One asymmetry between the formats survives all of this and is Excel's, not ours:
+a `.xls` stores the link as a path *relative* to the workbook holding it, while
+a `.xlsx` stores an absolute one. The same workbook saved both ways and then
+moved therefore resolves from one and not the other. Both are reported faithfully
+— the parity that is enforced is that both formats find the same references in
+the same cells, not that a moved file resolves identically from each.
 """
 
 from __future__ import annotations
