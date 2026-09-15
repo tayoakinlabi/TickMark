@@ -26,6 +26,7 @@ from datetime import datetime
 from html import escape
 
 from tickmark import __version__
+from tickmark.checks.stale_values import Coverage
 from tickmark.findings.model import Finding, Severity
 from tickmark.workbook.inventory import Inventory
 
@@ -125,9 +126,11 @@ footer { margin-top: 3rem; color: var(--muted); font-size: .78rem; }
 # Stated plainly rather than buried, so a clean report is not mistaken for proof
 # that the workbook is correct.
 _NOT_CHECKED = [
-    "Whether the numbers are <em>right</em> — Tickmark reads formulas, it never calculates them.",
+    "Most arithmetic. Tickmark recomputes only simple formulas — see the coverage "
+    "figure above for how many in this workbook, and treat the rest as unchecked.",
     "Anything inside VBA macros. Their presence is reported; their contents are never parsed.",
-    "Legacy <code>.xls</code> files and Google Sheets.",
+    "Google Sheets, Numbers, and <code>.xlsb</code>. "
+    "(<code>.xls</code> and <code>.xlsx</code> are both read.)",
     "Whether a formula matches what the business actually intended.",
 ]
 
@@ -210,11 +213,49 @@ def _inventory_html(inventory: Inventory) -> str:
     )
 
 
+def _coverage_html(coverage: Coverage) -> str:
+    """State plainly how much of the workbook the evaluator could vouch for.
+
+    Section 10.1 of 04-tickmark.md makes this mandatory rather than decorative:
+    a tool that verifies part of a workbook and stays quiet about the rest lets
+    the reader assume the whole thing was checked. The refused count is shown
+    even when it is large — especially when it is large.
+    """
+    if not coverage.total:
+        return ""
+    refused = coverage.total - coverage.verified
+    parts = [
+        "<h2>How much was arithmetically verified</h2>",
+        '<div class="note">',
+        f"<p><strong>{coverage.compared:,} of {coverage.total:,} formulas</strong> "
+        f"were recomputed and checked against the value stored beside them "
+        f"({coverage.percentage:.0f}% were within the evaluated subset).</p>",
+    ]
+    if refused:
+        parts.append(
+            f"<p>{refused:,} formula{'s' if refused != 1 else ''} could not be "
+            "verified. Tickmark evaluates only arithmetic and a short list of "
+            "functions — SUM, AVERAGE, MIN, MAX, COUNT, COUNTA, ROUND, ROUNDUP, "
+            "ROUNDDOWN and ABS — over numeric cells. Anything else is left alone "
+            "rather than guessed at. <strong>An unverified formula has not been "
+            "checked for arithmetic; it is not a formula that passed.</strong></p>"
+        )
+    if coverage.verified and not coverage.compared:
+        parts.append(
+            "<p>This workbook stores no calculated values, so there was nothing "
+            "to compare against. Open and save it in Excel to make this check "
+            "meaningful.</p>"
+        )
+    parts.append("</div>")
+    return "".join(parts)
+
+
 def render_report(
     inventory: Inventory,
     findings: Sequence[Finding],
     *,
     generated_at: datetime | None = None,
+    coverage: Coverage | None = None,
 ) -> str:
     """Render one workbook's audit as a complete, standalone HTML document."""
     stamp = (generated_at or datetime.now()).strftime("%d %B %Y at %H:%M")
@@ -233,7 +274,7 @@ def render_report(
 
     if not findings:
         body.append(
-            '<div class="clean"><strong>No findings.</strong> None of the seven checks '
+            '<div class="clean"><strong>No findings.</strong> None of the checks '
             "matched anything in this workbook. See the limits below before reading "
             "that as a clean bill of health.</div>"
         )
@@ -249,6 +290,8 @@ def render_report(
         )
         body.extend(_finding_html(f) for f in matching)
 
+    if coverage is not None:
+        body.append(_coverage_html(coverage))
     body.append(_inventory_html(inventory))
     body.append(
         "<h2>What this audit does not cover</h2>"

@@ -83,6 +83,11 @@ class Rules:
     # How many complex formulas check 7 names. Bounded because "this is
     # complicated" repeated four hundred times is wallpaper, not advice.
     complexity_limit: int = 10
+    # Check 35, the tier B evaluator. On by default: it only ever reports a
+    # disagreement between a formula and the value stored beside it, which is a
+    # fact about the file rather than a judgement about it. Switchable because
+    # it is the one check that costs real time on a large workbook.
+    evaluate_formulas: bool = True
 
     def is_ignored_number(self, value: float) -> bool:
         return value in self.ignored_numbers
@@ -116,6 +121,8 @@ class Rules:
             updates["report_integer_constants"] = bool(value)
         if (value := data.get("complexity_limit")) is not None:
             updates["complexity_limit"] = int(value)
+        if (value := data.get("evaluate_formulas")) is not None:
+            updates["evaluate_formulas"] = bool(value)
 
         return replace(base, **updates)
 

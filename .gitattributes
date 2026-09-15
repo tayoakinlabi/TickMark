@@ -4,7 +4,14 @@
 * text=auto eol=lf
 
 # Binary fixtures must never be line-ending converted — it corrupts them.
+# The legacy BIFF formats belong here just as much as the OOXML ones: a .xls is
+# an OLE container, and 'text=auto' guessing wrong about one would corrupt the
+# only fixture that can carry a shared formula.
 *.xlsx binary
 *.xlsm binary
+*.xls  binary
+*.xlt  binary
+*.xltx binary
+*.xltm binary
 *.png binary
 *.ico binary

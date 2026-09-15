@@ -23,7 +23,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from tickmark import __version__
-from tickmark.checks.registry import run_checks
+from tickmark.checks.registry import run_audit
+from tickmark.checks.stale_values import Coverage
 from tickmark.config.rules import DEFAULT_RULES, Rules
 from tickmark.findings.model import Finding, Severity
 from tickmark.report.html_report import render_report, render_summary_index
@@ -32,7 +33,7 @@ from tickmark.workbook.loader import WorkbookError, open_workbook
 
 __all__ = ["main"]
 
-_SUFFIXES = (".xlsx", ".xlsm", ".xltx", ".xltm")
+_SUFFIXES = (".xlsx", ".xlsm", ".xltx", ".xltm", ".xls", ".xlt")
 
 _EXIT_OK = 0
 _EXIT_FINDINGS = 1
@@ -72,8 +73,8 @@ def _audit_one(path: Path, rules: Rules, *, quiet: bool) -> tuple[list[Finding],
     try:
         with open_workbook(path) as workbook:
             inventory = take_inventory(workbook)
-            findings = run_checks(workbook, rules=rules)
-            html = render_report(inventory, findings)
+            result = run_audit(workbook, rules=rules)
+            html = render_report(inventory, result.findings, coverage=result.coverage)
     except WorkbookError as exc:
         print(f"  {path.name}: could not read — {exc.reason}", file=sys.stderr)
         return None
@@ -82,8 +83,30 @@ def _audit_one(path: Path, rules: Rules, *, quiet: bool) -> tuple[list[Finding],
         return None
 
     if not quiet:
-        _print_findings(findings, path=path)
-    return findings, html
+        _print_findings(result.findings, path=path)
+        _print_coverage(result.coverage)
+    return result.findings, html
+
+
+def _print_coverage(coverage: Coverage) -> None:
+    """Say what was verified, so silence is never mistaken for a clean bill.
+
+    Printed on every run rather than only when something was found: the whole
+    point of the number is that it qualifies the *absence* of findings.
+    """
+    if not coverage.total:
+        return
+    refused = coverage.total - coverage.verified
+    line = f"    verified {coverage.compared} of {coverage.total} formulas arithmetically"
+    if refused:
+        line += f" ({refused} outside the evaluated subset)"
+    print(line)
+    if coverage.verified and not coverage.compared:
+        # Distinct from "nothing could be evaluated": the arithmetic was fine,
+        # there was simply no stored value to check it against. Without this the
+        # line above reads as a failure of the checker rather than a property of
+        # the file, and the user has no idea the remedy is to open and save it.
+        print("      (this workbook stores no calculated values to compare against)")
 
 
 def _threshold(name: str) -> int:
@@ -128,6 +151,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="also report whole-number constants inside formulas",
     )
+    parser.add_argument(
+        "--no-evaluate",
+        action="store_true",
+        help="skip check 10, which recomputes simple formulas (the slowest check)",
+    )
     parser.add_argument("-q", "--quiet", action="store_true", help="suppress per-finding output")
     parser.add_argument("--version", action="version", version=f"tickmark {__version__}")
     return parser
@@ -160,7 +188,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"nothing to audit at {args.target}", file=sys.stderr)
         return _EXIT_NOTHING_AUDITED
 
-    rules = Rules(report_integer_constants=True) if args.include_integers else DEFAULT_RULES
+    rules = DEFAULT_RULES
+    if args.include_integers or args.no_evaluate:
+        rules = Rules(
+            report_integer_constants=args.include_integers,
+            evaluate_formulas=not args.no_evaluate,
+        )
 
     output_dir = args.output if args.output and args.output.is_dir() else None
     if args.output and not args.output.suffix and not args.output.exists():

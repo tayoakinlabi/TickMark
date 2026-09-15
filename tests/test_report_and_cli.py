@@ -73,7 +73,12 @@ class TestHtmlReport:
         # A clean report must not be mistaken for proof the workbook is correct.
         html = render_report(*audit(workbook_with_problems(tmp_path)))
         assert "does not cover" in html
-        assert "never calculates them" in html
+        # Tier B means the honest claim is now "most arithmetic is unchecked"
+        # rather than "none of it is calculated". The report has to say which,
+        # because a reader who assumes the stronger limit will discount findings
+        # the evaluator genuinely made.
+        assert "Most arithmetic" in html
+        assert "treat the rest as unchecked" in html
 
     def test_clean_workbook_says_so_without_overclaiming(self, tmp_path: Path):
         wb = Workbook()

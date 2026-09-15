@@ -43,9 +43,12 @@ __all__ = [
     "open_workbook",
 ]
 
-# openpyxl reads these. '.xls' and '.xlsb' are deliberately absent — see
-# 04-tickmark.md section 7, items 7 and 9.
-_SUPPORTED_SUFFIXES = frozenset({".xlsx", ".xlsm", ".xltx", ".xltm"})
+# openpyxl reads these.
+_MODERN_SUFFIXES = frozenset({".xlsx", ".xlsm", ".xltx", ".xltm"})
+# Read by the BIFF backend instead — see tickmark.workbook.biff. '.xlsb' stays
+# out: it is a third format again, neither OOXML nor BIFF8.
+_LEGACY_SUFFIXES = frozenset({".xls", ".xlt"})
+_SUPPORTED_SUFFIXES = _MODERN_SUFFIXES | _LEGACY_SUFFIXES
 _MACRO_SUFFIXES = frozenset({".xlsm", ".xltm"})
 
 
@@ -211,6 +214,7 @@ class LoadedWorkbook:
         self._wb = workbook
         self._values_wb: Any | None = None
         self._values_loaded = False
+        self._value_cache: dict[str, dict[tuple[int, int], object]] = {}
 
     @property
     def name(self) -> str:
@@ -282,6 +286,33 @@ class LoadedWorkbook:
         for sheet in self.sheets:
             yield from sheet.formulas()
 
+    def cached_values(self, name: str) -> dict[tuple[int, int], object]:
+        """Every cached value on one sheet, keyed by ``(row, column)``.
+
+        Built once per sheet and held, because the tier B evaluator asks for
+        precedent cells one at a time and re-streaming the sheet per lookup
+        would turn a linear pass into a quadratic one.
+
+        An absent sheet, or a workbook that will not open for values at all,
+        yields an empty mapping rather than an error: an unverifiable workbook
+        is a coverage number of zero, not a failed audit.
+        """
+        if name in self._value_cache:
+            return self._value_cache[name]
+        ws = self._values_sheet(name)
+        table: dict[tuple[int, int], object] = {}
+        if ws is not None:
+            for row in ws.iter_rows():
+                for cell in row:
+                    if cell.value is not None:
+                        table[(cell.row, cell.column)] = cell.value
+        self._value_cache[name] = table
+        return table
+
+    def cached_value(self, sheet: str, row: int, column: int) -> object:
+        """One cached value, or ``None`` if the cell is empty or unreadable."""
+        return self.cached_values(sheet).get((row, column))
+
     def _values_sheet(self, name: str) -> Any | None:
         """Lazily load the cached-values view, then return one sheet from it."""
         if not self._values_loaded:
@@ -314,8 +345,12 @@ class LoadedWorkbook:
 def open_workbook(path: str | Path) -> LoadedWorkbook:
     """Open a workbook for auditing.
 
+    Dispatches on the extension: OOXML goes through openpyxl, legacy BIFF
+    through :mod:`tickmark.workbook.legacy`. Everything above this function sees
+    one interface regardless.
+
     Raises:
-        UnsupportedFormatError: for ``.xls``, ``.xlsb`` and anything else not read.
+        UnsupportedFormatError: for ``.xlsb`` and anything else not read.
         PasswordProtectedError: if the file is encrypted.
         CorruptWorkbookError: if the file cannot be parsed.
     """
@@ -325,11 +360,14 @@ def open_workbook(path: str | Path) -> LoadedWorkbook:
     if not path.exists():
         raise UnsupportedFormatError(path, "file does not exist")
 
-    if suffix == ".xls":
-        raise UnsupportedFormatError(
-            path,
-            "legacy .xls is not supported — re-save as .xlsx and audit that",
-        )
+    if suffix in _LEGACY_SUFFIXES:
+        # Imported here rather than at module scope: the legacy path pulls in
+        # xlrd and olefile, and a user who only ever audits .xlsx should not pay
+        # for them on every run.
+        from tickmark.workbook.legacy import open_legacy_workbook
+
+        return open_legacy_workbook(path)
+
     if suffix == ".xlsb":
         raise UnsupportedFormatError(
             path,

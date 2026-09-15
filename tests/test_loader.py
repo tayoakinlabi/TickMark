@@ -70,10 +70,20 @@ class TestInventorySignals:
 
 
 class TestRejections:
-    def test_legacy_xls_is_refused_by_extension(self, fake_xls: Path):
-        # Refused before parsing: the message must tell the user what to do.
+    def test_xls_extension_on_a_non_ole_file_is_refused(self, fake_xls: Path):
+        # .xls is read now, but only when the bytes really are a BIFF container.
+        # An HTML or CSV export wearing the extension is common enough that the
+        # message has to say what is actually wrong rather than "corrupt".
         with pytest.raises(UnsupportedFormatError) as excinfo:
             open_workbook(fake_xls)
+        assert "not a real .xls" in str(excinfo.value)
+
+    def test_xlsb_is_still_refused(self, tmp_path: Path):
+        # .xlsb is a third format again, neither OOXML nor BIFF8: still out.
+        path = tmp_path / "book.xlsb"
+        path.write_bytes(b"not a workbook")
+        with pytest.raises(UnsupportedFormatError) as excinfo:
+            open_workbook(path)
         assert "re-save as .xlsx" in str(excinfo.value)
 
     def test_non_workbook_is_refused(self, not_a_workbook: Path):
