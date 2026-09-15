@@ -191,13 +191,15 @@ class LegacyWorkbook(LoadedWorkbook):
 
     @cached_property
     def external_links(self) -> dict[int, str]:
-        """Empty for legacy files — see the limitation in :mod:`~tickmark.workbook.biff`.
+        """``[n]`` -> the workbook that ``n`` refers to, decoded from SUPBOOK.
 
-        Check 4 still reports external references; it just cannot name the file
-        on disk. Returning an empty map is what makes it degrade that way rather
-        than claim a wrong target.
+        Numbered the same way the ``.xlsx`` path numbers them, so check 4 cannot
+        tell the two formats apart. Empty when the file links to nothing, or
+        when the reference could not be attributed confidently — see
+        :mod:`~tickmark.workbook.biff` for why a wrong attribution is worse than
+        none here.
         """
-        return {}
+        return dict(self._legacy.external_links)
 
     @cached_property
     def defined_names(self) -> tuple[tuple[str, str], ...]:

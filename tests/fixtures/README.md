@@ -18,8 +18,15 @@ Identical content in the two formats must produce identical findings. That test
 is the real guarantee behind reading `.xls` at all, because a second backend that
 quietly disagrees with the first is worse than no second backend.
 
-`make_excel_authored.py` is what generated them. It needs Excel installed and is
-not run by the suite:
+`external_link.xls` / `external_link.xlsx` are a second Excel-authored pair, plus
+`source_book.xls`, the workbook they link to. They exist because a link into
+another workbook is stored as an index into a table of files, and only Excel
+writes that table — `xlwt` has no notion of one. The linked file is committed
+alongside so the "target is present" and "target is missing" cases can both be
+built by copying one file or two.
+
+`make_excel_authored.py` and `make_external_link.py` are what generated them.
+They need Excel installed and are not run by the suite:
 
 ```
 uv run --with pywin32 python tests/fixtures/make_excel_authored.py <output-dir> .xls

@@ -18,6 +18,7 @@ committed; see ``tests/fixtures/README.md``.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -31,11 +32,26 @@ xlwt = pytest.importorskip("xlwt")
 FIXTURES = Path(__file__).parent / "fixtures"
 EXCEL_XLS = FIXTURES / "excel_authored.xls"
 EXCEL_XLSX = FIXTURES / "excel_authored.xlsx"
+LINK_XLS = FIXTURES / "external_link.xls"
+LINK_XLSX = FIXTURES / "external_link.xlsx"
+LINK_TARGET = FIXTURES / "source_book.xls"
 
 needs_excel_fixture = pytest.mark.skipif(
     not EXCEL_XLS.exists() or not EXCEL_XLSX.exists(),
     reason="Excel-authored fixture pair is not present",
 )
+
+needs_link_fixture = pytest.mark.skipif(
+    not LINK_XLS.exists() or not LINK_XLSX.exists() or not LINK_TARGET.exists(),
+    reason="external-link fixture set is not present",
+)
+
+
+def _copy(tmp_path, *names: str):
+    """Put fixtures in a scratch directory, since link resolution is relative."""
+    for name in names:
+        shutil.copy(FIXTURES / name, tmp_path / name)
+    return tmp_path
 
 
 @pytest.fixture
@@ -206,3 +222,54 @@ class TestExcelAuthored:
             )
 
         assert fingerprint(EXCEL_XLS) == fingerprint(EXCEL_XLSX)
+
+
+@needs_link_fixture
+class TestExternalLinks:
+    """Check 4 over a legacy file — the gap that shipped open in 0.1.0.
+
+    ``xlrd`` renders a reference into another workbook as ``<<external>>``, which
+    the reference parser does not recognise as external at all. So this was not
+    "the target is unresolved"; the link was invisible. Both halves are tested:
+    that the link is now *found*, and that the file it names is the right one.
+    """
+
+    def test_the_link_is_found_and_names_its_target(self, tmp_path: Path):
+        _copy(tmp_path, "external_link.xls", "source_book.xls")
+        with open_workbook(tmp_path / "external_link.xls") as wb:
+            assert wb.external_links == {1: "source_book.xls"}
+            formulas = {c.coordinate: c.formula for c in wb.sheet("Main").formulas()}
+        assert formulas["B1"] == "=[1]Rates!A1*A1"
+
+    def test_a_present_target_is_reported_as_a_note(self, tmp_path: Path):
+        _copy(tmp_path, "external_link.xls", "source_book.xls")
+        with open_workbook(tmp_path / "external_link.xls") as wb:
+            found = [f for f in run_audit(wb).findings if f.check == "external-link"]
+        assert found and all(f.severity.value == "info" for f in found)
+
+    def test_a_missing_target_is_high(self, tmp_path: Path):
+        # The linked workbook is deliberately not copied across.
+        _copy(tmp_path, "external_link.xls")
+        with open_workbook(tmp_path / "external_link.xls") as wb:
+            found = [f for f in run_audit(wb).findings if f.check == "external-link"]
+        assert found and all(f.severity.value == "high" for f in found)
+
+    def test_both_formats_agree(self, tmp_path: Path):
+        """Parity again, on the axis that was broken.
+
+        The two files store the target differently — the .xlsx keeps an absolute
+        file:// URL, the .xls a path relative to itself — so this asserts the
+        *finding*, which is what a reader acts on, rather than the stored text.
+        """
+        _copy(tmp_path, "external_link.xls", "external_link.xlsx", "source_book.xls")
+
+        def fingerprint(name: str):
+            with open_workbook(tmp_path / name) as wb:
+                return sorted(
+                    (f.check, f.sheet, f.row, f.column, f.severity.value, f.summary)
+                    for f in run_audit(wb).findings
+                    if f.check == "external-link"
+                )
+
+        assert fingerprint("external_link.xls") == fingerprint("external_link.xlsx")
+        assert len(fingerprint("external_link.xls")) == 2
