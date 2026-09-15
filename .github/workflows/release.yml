@@ -81,6 +81,25 @@ jobs:
         # cannot go out with an empty body by accident.
         run: uv run python packaging/release_notes.py "${{ github.event.inputs.tag || github.ref_name }}" --out release-notes.md
 
+      - name: Append the checksums of what was actually built
+        # The README tells people to verify the published SHA-256 before running
+        # an unsigned binary, so the notes have to carry it. Taken from the
+        # freshly built files rather than written by hand, which is the only way
+        # they cannot be stale.
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            printf '\n## Verifying your download\n\n'
+            printf 'This build is unsigned. Check what you downloaded before running it:\n\n'
+            printf '```powershell\nGet-FileHash .\\tickmark-%s-setup.exe -Algorithm SHA256\n```\n\n' \
+              "$(./dist/tickmark.exe --version | awk '{print $2}')"
+            printf '```\n'
+            cat dist/*.sha256
+            printf '```\n'
+          } >> release-notes.md
+          cat release-notes.md | tail -20
+
       - name: Upload to the release
         uses: softprops/action-gh-release@v2
         with:
