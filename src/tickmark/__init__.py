@@ -17,4 +17,4 @@ Two hard rules hold across the whole package:
    10, for why growing it function by function is the thing to refuse.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

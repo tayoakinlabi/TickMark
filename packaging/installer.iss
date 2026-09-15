@@ -19,7 +19,18 @@
 ;    the claim it qualifies.
 
 #define AppName "Tickmark"
-#define AppVersion "0.1.0"
+; Passed in by build.py as /DAppVersion=<version>, read from the package itself.
+; It was hardcoded once, and the 0.2.0 build quietly produced an installer named
+; tickmark-0.1.0-setup.exe wrapping 0.2.0 binaries — a mislabelled release is
+; worse than a missing one, because nothing about it looks wrong until someone
+; tries to work out which version broke them.
+;
+; The fallback only exists so this file still compiles when run by hand. It is
+; deliberately not a real version number: seeing 0.0.0-unknown in a filename is
+; meant to be obviously wrong.
+#ifndef AppVersion
+  #define AppVersion "0.0.0-unknown"
+#endif
 #define AppPublisher "Tickmark contributors"
 #define AppURL "https://github.com/tayoakinlabi/tickmark"
 #define AppExeName "tickmark.exe"

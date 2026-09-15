@@ -211,8 +211,22 @@ def build_installer(version: str) -> Path | None:
             "  or download it from https://jrsoftware.org/isdl.php, then run this again."
         )
         return None
-    _run([compiler, str(ISS)])
-    return DIST / f"tickmark-{version}-setup.exe"
+    # The version is passed in rather than written in the .iss, so the installer
+    # cannot end up named after a different release than the binaries it wraps.
+    _run([compiler, f"/DAppVersion={version}", str(ISS)])
+
+    installer = DIST / f"tickmark-{version}-setup.exe"
+    if not installer.exists():
+        # Loudly, because the previous version of this returned the path without
+        # checking. Inno Setup had reported success while writing a differently
+        # named file, so the build printed a tidy artefact list with the
+        # installer simply missing from it and exited 0.
+        produced = sorted(p.name for p in DIST.glob("*setup*.exe"))
+        raise SystemExit(
+            f"Inno Setup reported success but {installer.name} is not there.\n"
+            f"  found instead: {produced or 'nothing'}"
+        )
+    return installer
 
 
 def main() -> int:

@@ -99,4 +99,11 @@ class TestAgainstTheRealChangelog:
         body = extract(CHANGELOG.read_text(encoding="utf-8"), __version__)
         assert len(body) > 200
         # The honesty line is the one thing these notes must never lose.
-        assert "not a formula that passed" in body
+        #
+        # Whitespace is collapsed first. The changelog is hard-wrapped prose, so
+        # a phrase straddling a line break is invisible to a plain substring
+        # test — which is a property of the paragraph's width, not of whether
+        # the sentence is there. Asserting on the raw text made reflowing a
+        # paragraph a test failure.
+        flattened = " ".join(body.split())
+        assert "not a formula that passed" in flattened
