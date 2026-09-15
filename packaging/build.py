@@ -91,7 +91,15 @@ def write_checksum(exe: Path) -> Path:
     target = exe.with_suffix(exe.suffix + ".sha256")
     # The two-space format is what `sha256sum -c` expects, so a user on any
     # platform can check it with a tool they already have.
-    target.write_text(f"{digest}  {exe.name}\n", encoding="utf-8")
+    #
+    # newline="" matters, and this shipped wrong once. Python translates "\n" to
+    # "\r\n" on Windows by default, and `sha256sum -c` then reads the filename as
+    # "tickmark.exe\r" and reports the file missing — a verification failure that
+    # looks exactly like a corrupt or tampered download. That is the worst
+    # possible false alarm to raise on an unsigned binary whose checksum is the
+    # only assurance the user has.
+    with target.open("w", encoding="utf-8", newline="") as handle:
+        handle.write(f"{digest}  {exe.name}\n")
     print(f"sha256 {digest}")
     return target
 
