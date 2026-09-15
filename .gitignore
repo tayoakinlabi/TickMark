@@ -26,6 +26,9 @@ dist/
 # Benchmark scratch — audit_bench.py writes its generated workbook here
 /bench.xlsx
 
+# CI writes the test output here so failures can be echoed as annotations
+/pytest.log
+
 # OS
 Thumbs.db
 desktop.ini

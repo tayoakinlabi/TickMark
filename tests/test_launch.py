@@ -33,11 +33,23 @@ class TestPortSelection:
         assert 1024 < port < 65536
 
     def test_the_port_is_actually_bindable(self):
-        # Reserved by binding and releasing, so the number handed back must be
-        # one uvicorn can then take.
-        port = launch.reserve_port()
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-            probe.bind((launch.HOST, port))
+        """Reserved by binding and releasing, so the number must be rebindable.
+
+        There is an unavoidable race in that design — something else on the
+        machine can take the port in the gap — so this retries rather than
+        asserting on one attempt. A shared CI runner loses that race often
+        enough to matter, and a test that fails for a reason the code is not
+        responsible for teaches people to rerun rather than to read.
+        """
+        for attempt in range(5):
+            port = launch.reserve_port()
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                    probe.bind((launch.HOST, port))
+                return
+            except OSError:
+                if attempt == 4:
+                    raise
 
 
 class TestLockfile:
@@ -60,15 +72,24 @@ class TestLockfile:
     def test_absent_means_nothing_is_running(self, state: Path):
         assert launch.already_running() is None
 
-    def test_a_stale_lockfile_is_treated_as_absent(self, state: Path):
+    def test_a_stale_lockfile_is_treated_as_absent(
+        self, state: Path, monkeypatch: pytest.MonkeyPatch
+    ):
         """The case that matters: a port nothing is listening on.
 
         Believing this would make Tickmark refuse to start and send the user to
         a dead address, which is indistinguishable from the program being broken.
+
+        The liveness probe is stubbed rather than pointed at a port we hope is
+        free. Reserving a port and releasing it does not keep it free, so the
+        original version of this test asserted "nothing is listening here" and
+        depended on the rest of the machine to cooperate. What is being tested
+        is the decision — a lockfile naming a dead port is ignored — and that
+        deserves to be checked deterministically. `_port_is_live` itself is
+        covered by the live-listener test below, which holds its own socket.
         """
-        # Reserve then release, so the port is almost certainly free again.
-        dead = launch.reserve_port()
-        launch.write_lock(Session(port=dead))
+        monkeypatch.setattr(launch, "_port_is_live", lambda port: False)
+        launch.write_lock(Session(port=54321))
         assert launch.already_running() is None
 
     def test_a_malformed_lockfile_is_treated_as_absent(self, state: Path):

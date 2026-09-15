@@ -41,7 +41,23 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Test
-        run: uv run pytest -q
+        shell: bash
+        run: |
+          # Failures are echoed back as ::error:: annotations, which is not
+          # decoration. Downloading a workflow log needs admin rights on the
+          # repository, so a failure that exists only in the log is one that
+          # nobody outside this repo — a contributor, or anyone triaging from a
+          # fork — can diagnose at all. Annotations are readable by everyone.
+          status=0
+          uv run pytest -q --tb=line > pytest.log 2>&1 || status=$?
+          cat pytest.log
+          if [ "$status" != "0" ]; then
+            grep -E '^(FAILED|ERROR)' pytest.log | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            echo "::error::pytest exited $status"
+          fi
+          exit $status
 
       - name: Audit a real workbook end to end
         # The suite exercises the engine; this proves the installed console
