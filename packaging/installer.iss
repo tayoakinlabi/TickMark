@@ -70,7 +70,16 @@ Source: "..\README.md";          DestDir: "{app}"; Flags: ignoreversion isreadme
 Source: "..\LICENSE";            DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
+; --serve, explicitly. The Start menu entry is how a person opens a program, and
+; the program is the browser interface. Without the argument this ran the CLI
+; with no target, which printed a usage error and exited — so Windows closed the
+; console it had just created and the user saw a box flash and vanish. That was
+; reported, accurately, as "I installed it and it didn't open".
+;
+; The executable now also opens the interface when double-clicked with no
+; arguments, so this is belt and braces. It stays because a shortcut that says
+; what it does beats one that relies on the program guessing.
+Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Parameters: "--serve"; Comment: "Audit Excel workbooks in your browser"
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 
 [Registry]

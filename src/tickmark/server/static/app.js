@@ -226,7 +226,13 @@ browseButton.addEventListener("click", async () => {
     }
     // A cancelled dialog is not an event worth reporting.
   } catch (err) {
-    setStatus("Could not open a folder window.", "error");
+    // fetch only throws here when the request never completed, which means the
+    // server is gone — not that the dialog failed. Saying "could not open a
+    // folder window" sends people looking at the wrong thing entirely.
+    setStatus(
+      "Lost contact with Tickmark. Has the window that started it been closed?",
+      "error"
+    );
   } finally {
     browseButton.disabled = false;
     browseButton.textContent = previous;

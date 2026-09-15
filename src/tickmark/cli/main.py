@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import os
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
@@ -109,6 +110,100 @@ def _print_coverage(coverage: Coverage) -> None:
         # line above reads as a failure of the checker rather than a property of
         # the file, and the user has no idea the remedy is to open and save it.
         print("      (this workbook stores no calculated values to compare against)")
+
+
+def _opened_from_the_desktop() -> bool:
+    """True when this window was created for us — a double-click, not a prompt.
+
+    This exists because of a real bug report. The installer's Start menu entry
+    ran ``tickmark.exe`` with no arguments; with no arguments the parser printed
+    a usage error and exited, Windows closed the console it had just created,
+    and the person who clicked saw a box flash and vanish. "I installed it and
+    it didn't open" — which was exactly true.
+
+    The signal is **who started us**. Launched from the Start menu, a desktop
+    shortcut or a double-click in a folder, our parent is Explorer. Typed at a
+    prompt, it is a shell, and a bare ``tickmark`` should still print usage like
+    any other command.
+
+    Counting the processes attached to the console was tried first and is wrong:
+    a console freshly created for a double-clicked program reports *two*, not
+    one, because the console host counts as well — and whether it does varies
+    with the Windows version and terminal in use. Asking who the parent is says
+    what we actually mean.
+
+    Anything unexpected — another platform, a call that fails, a parent that has
+    already exited — answers *no*. Launching a web server for somebody who piped
+    this into a script would be a worse bug than the one it fixes.
+
+    One wrinkle from being shipped frozen: a one-file PyInstaller build starts a
+    bootloader which unpacks itself and runs the real program as a *child*, so
+    our immediate parent is another ``tickmark.exe`` and Explorer is one step
+    further up. The walk therefore skips ancestors sharing our own image name
+    before deciding.
+    """
+    if sys.platform != "win32":
+        return False
+    try:
+        ours = os.path.basename(sys.executable).lower()
+        for name in _ancestor_names(limit=4):
+            if name and name != ours:
+                return name == "explorer.exe"
+        return False
+    except Exception:  # noqa: BLE001 - a guess here must never be fatal
+        return False
+
+
+def _ancestor_names(limit: int = 4) -> list[str]:
+    """Image names of this process's ancestors, nearest first, lowercased."""
+    import ctypes
+    from ctypes import wintypes
+
+    TH32CS_SNAPPROCESS = 0x00000002
+
+    class PROCESSENTRY32(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", ctypes.c_long),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", ctypes.c_char * 260),
+        ]
+
+    kernel32 = ctypes.windll.kernel32
+    snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if snapshot == -1:
+        return []
+
+    try:
+        # One pass over the table; walking it repeatedly would be quadratic and
+        # this runs before anything else the program does.
+        parents: dict[int, int] = {}
+        names: dict[int, str] = {}
+        entry = PROCESSENTRY32()
+        entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
+        if kernel32.Process32First(snapshot, ctypes.byref(entry)):
+            while True:
+                parents[entry.th32ProcessID] = entry.th32ParentProcessID
+                names[entry.th32ProcessID] = entry.szExeFile.decode("latin-1", "replace").lower()
+                if not kernel32.Process32Next(snapshot, ctypes.byref(entry)):
+                    break
+
+        chain: list[str] = []
+        seen: set[int] = set()
+        current = parents.get(kernel32.GetCurrentProcessId(), 0)
+        while current and current not in seen and len(chain) < limit:
+            seen.add(current)  # a reused pid could otherwise loop forever
+            chain.append(names.get(current, ""))
+            current = parents.get(current, 0)
+        return chain
+    finally:
+        kernel32.CloseHandle(snapshot)
 
 
 def _rules_from(args: argparse.Namespace) -> Rules:
@@ -242,7 +337,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if args.serve:
+    # No arguments, and nothing was typed at a prompt: somebody opened this the
+    # way you open a program. Show them the program.
+    if args.serve or (args.target is None and _opened_from_the_desktop()):
         # Imported here, not at module scope: the engine and the CLI must work
         # with no web dependency loaded at all, and a user who never opens the
         # browser interface should not pay to import FastAPI.
