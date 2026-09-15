@@ -4,8 +4,28 @@ Point it at a folder of Excel files. Get a report of every inconsistent formula,
 hardcoded constant, broken link and silent error — before they cost you.
 
 Tickmark runs entirely on your machine. No model, no network, no API key, no
-account. It is the only tool of its kind that is free and open source; the
-commercial equivalents are enterprise-priced.
+account.
+
+**Two things set it apart from the other auditors**, free and commercial alike:
+
+- **It reads legacy `.xls` natively** — the Excel 97-2003 binary format, with no
+  conversion step and no Excel installation. That matters because a workbook
+  still in that format has usually gone twenty years without anyone rewriting
+  it, which is exactly where an unnoticed error has had longest to compound.
+- **It tells you how much it actually verified.** Every report carries a line
+  like *"recomputed 847 of 1,203 formulas"*. A tool that silently checks part of
+  a workbook lets you believe it checked all of it.
+
+And one commitment that is not unique but is load-bearing: **it never writes to
+your workbooks.** Reports only — no repairs, no auto-fixing, nothing that can go
+wrong inside a file you rely on.
+
+Other open-source options exist and are worth knowing about:
+[WorkbookLens](https://github.com/chenweixin123/workbooklens) is broader and will
+repair workbooks as well as lint them, and
+[spreadsheet-auditor](https://github.com/petehottelet/spreadsheet-auditor) covers
+much of the same ground with some finance-specific checks. Neither reads `.xls`
+without converting it first.
 
 [![CI](https://github.com/tayoakinlabi/TickMark/actions/workflows/ci.yml/badge.svg)](https://github.com/tayoakinlabi/TickMark/actions/workflows/ci.yml)
 
