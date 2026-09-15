@@ -33,13 +33,30 @@ DIST = ROOT / "dist"
 SPEC = ROOT / "packaging" / "tickmark.spec"
 ISS = ROOT / "packaging" / "installer.iss"
 
-# The usual install locations, newest first. Inno Setup does not put itself on
-# PATH, so looking is more useful than telling the user to fix their PATH.
-_INNO_CANDIDATES = (
-    r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
-    r"C:\Program Files\Inno Setup 6\ISCC.exe",
-    r"C:\Program Files (x86)\Inno Setup 5\ISCC.exe",
-)
+
+def _inno_candidates() -> tuple[str, ...]:
+    """Where ISCC.exe might live, most likely first.
+
+    Inno Setup does not put itself on PATH, so looking is more useful than
+    telling the user to fix theirs. The %LOCALAPPDATA%\\Programs entry is not an
+    afterthought: `winget install JRSoftware.InnoSetup` installs per-user by
+    default, so for anyone who follows the README's own suggestion that is the
+    only place it lands. A build that reports "Inno Setup not found" immediately
+    after you installed it sends you hunting for a problem that is not there.
+    """
+    roots = [
+        os.path.join(local, "Programs") if (local := os.environ.get("LOCALAPPDATA")) else "",
+        # Uppercase because Python normalises environment keys to upper case on
+        # Windows; these are the same two variables Explorer shows mixed-case.
+        os.environ.get("PROGRAMFILES", ""),
+        os.environ.get("PROGRAMFILES(X86)", ""),
+    ]
+    return tuple(
+        os.path.join(root, edition, "ISCC.exe")
+        for root in roots
+        if root
+        for edition in ("Inno Setup 6", "Inno Setup 5")
+    )
 
 
 def _version() -> str:
@@ -104,13 +121,16 @@ def smoke_test(exe: Path) -> None:
 
 
 def build_installer(version: str) -> Path | None:
-    compiler = next((c for c in _INNO_CANDIDATES if os.path.exists(c)), None)
+    compiler = shutil.which("ISCC") or next(
+        (c for c in _inno_candidates() if os.path.exists(c)), None
+    )
     if compiler is None:
         print(
             "\nInno Setup not found - skipping the installer.\n"
             "  dist/tickmark.exe is a complete release on its own.\n"
-            "  To build the installer too, install Inno Setup 6 from\n"
-            "  https://jrsoftware.org/isdl.php and run this again."
+            "  To build the installer too:\n"
+            "    winget install JRSoftware.InnoSetup\n"
+            "  or download it from https://jrsoftware.org/isdl.php, then run this again."
         )
         return None
     _run([compiler, str(ISS)])
@@ -135,9 +155,17 @@ def main() -> int:
     write_checksum(exe)
     installer = build_installer(version)
 
+    artefacts = [exe, exe.with_suffix(exe.suffix + ".sha256")]
+    if installer is not None and installer.exists():
+        # The installer gets a checksum too. It is the download the README steers
+        # most people towards, so publishing a verifiable hash for the bare .exe
+        # and not for the installer would leave the majority of users with
+        # nothing to check — which is the opposite of the intent.
+        artefacts += [installer, write_checksum(installer)]
+
     print("\nartefacts:")
-    for path in (exe, exe.with_suffix(exe.suffix + ".sha256"), installer):
-        if path is not None and path.exists():
+    for path in artefacts:
+        if path.exists():
             print(f"  {path.relative_to(ROOT)}  ({path.stat().st_size / 1_048_576:.1f} MB)")
     return 0
 
