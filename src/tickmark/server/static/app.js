@@ -16,6 +16,7 @@ const MAX_RECENT = 8;
 const form = document.getElementById("audit-form");
 const pathInput = document.getElementById("path");
 const runButton = document.getElementById("run");
+const browseButton = document.getElementById("browse");
 const statusBox = document.getElementById("status");
 const warningsBox = document.getElementById("warnings");
 const results = document.getElementById("results");
@@ -194,6 +195,44 @@ function renderWarnings(warnings) {
   show(warningsBox, true);
 }
 
+// The button stays hidden unless the machine running the server can actually
+// show a dialog. A control that does nothing is worse than no control.
+async function enableBrowsing() {
+  try {
+    const response = await fetch("/api/capabilities", { credentials: "same-origin" });
+    const payload = await response.json();
+    browseButton.hidden = !payload.browse;
+  } catch (err) {
+    browseButton.hidden = true;
+  }
+}
+
+browseButton.addEventListener("click", async () => {
+  browseButton.disabled = true;
+  const previous = browseButton.textContent;
+  browseButton.textContent = "Choose…";
+  try {
+    const response = await fetch("/api/browse", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (payload.path) {
+      pathInput.value = payload.path;
+      setStatus("", "");
+      pathInput.focus();
+    } else if (payload.error) {
+      setStatus(payload.error, "error");
+    }
+    // A cancelled dialog is not an event worth reporting.
+  } catch (err) {
+    setStatus("Could not open a folder window.", "error");
+  } finally {
+    browseButton.disabled = false;
+    browseButton.textContent = previous;
+  }
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const path = pathInput.value.trim();
@@ -256,3 +295,4 @@ form.addEventListener("submit", async (event) => {
 });
 
 renderRecent();
+enableBrowsing();

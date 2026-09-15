@@ -181,8 +181,10 @@ not worth thinking about otherwise.
 tickmark --serve
 ```
 
-Opens a page at `127.0.0.1` on a port picked at startup. Paste a path, get the
-findings, open the full report. Same engine as the command line — a workbook
+Opens a page at `127.0.0.1` on a port picked at startup. Choose a folder with
+the Browse button — a real Windows folder dialog, opened by the server on your
+machine, because a browser will never hand a page an absolute path — or paste
+one. Then read the findings and open the full report. Same engine as the command line — a workbook
 audited in the browser and in the terminal cannot disagree.
 
 **It is not reachable by anything but you.** That is not the same as "it only

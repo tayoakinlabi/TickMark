@@ -100,6 +100,21 @@ button:disabled {
   cursor: progress;
 }
 
+/* Browse is the secondary action: the field is still the primary way in, and
+   the button is only there for people who would rather not paste a path. */
+#browse {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#browse:hover:not(:disabled) {
+  border-color: var(--muted);
+  background: #f1f3f5;
+}
+
 .options {
   margin: 1rem 0 0;
   border: 0;

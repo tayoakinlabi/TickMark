@@ -38,6 +38,8 @@ from tickmark.config.rules import DEFAULT_RULES, Rules
 from tickmark.findings.model import Severity
 from tickmark.report.html_report import render_report
 from tickmark.server.middleware import REPORT_CSP, install_security
+from tickmark.server.picker import PickerBusy, PickerUnavailable, choose_folder
+from tickmark.server.picker import available as picker_available
 from tickmark.server.session import COOKIE_NAME, QUERY_NAME, Session
 from tickmark.workbook.inventory import take_inventory
 from tickmark.workbook.loader import WorkbookError, open_workbook
@@ -167,6 +169,41 @@ def create_app(session: Session, on_ready: Callable[[], None] | None = None) -> 
     @app.get("/style.css")
     async def stylesheet() -> FileResponse:
         return FileResponse(STATIC / "style.css", media_type="text/css")
+
+    @app.get("/api/capabilities")
+    async def capabilities() -> JSONResponse:
+        """What this machine can do, so the page shows only controls that work."""
+        return JSONResponse({"browse": picker_available()})
+
+    # Deliberately `def`, not `async def`: the dialog blocks until somebody
+    # dismisses it, and Starlette runs a sync route on a worker thread rather
+    # than stalling the event loop and every other request with it.
+    @app.post("/api/browse")
+    def browse() -> JSONResponse:
+        """Open a native folder chooser on the machine running the server.
+
+        Not a filesystem API. It lists nothing and reads nothing; it returns the
+        one path a person standing at this machine picked. The browser cannot
+        learn an absolute path by any other means, which is the whole reason
+        this exists.
+        """
+        try:
+            chosen = choose_folder()
+        except PickerBusy:
+            return JSONResponse(
+                {"error": "A folder window is already open. Finish with that one first."},
+                status_code=409,
+            )
+        except PickerUnavailable as exc:
+            return JSONResponse({"error": str(exc)}, status_code=501)
+        except Exception as exc:  # noqa: BLE001 - a dialog must never take the server down
+            return JSONResponse(
+                {"error": f"Could not open a folder window: {exc}"}, status_code=500
+            )
+
+        if chosen is None:
+            return JSONResponse({"cancelled": True})
+        return JSONResponse({"path": chosen})
 
     @app.post("/api/audit")
     async def audit(request: Request) -> JSONResponse:
