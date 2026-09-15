@@ -7,10 +7,13 @@ Tickmark runs entirely on your machine. No model, no network, no API key, no
 account. It is the only tool of its kind that is free and open source; the
 commercial equivalents are enterprise-priced.
 
+[![CI](https://github.com/tayoakinlabi/TickMark/actions/workflows/ci.yml/badge.svg)](https://github.com/tayoakinlabi/TickMark/actions/workflows/ci.yml)
+
 > **Status: pre-alpha.** The audit engine is finished — ten checks, the HTML
-> report, batch mode and the CLI, under 354 passing tests — and it now builds to
-> a single Windows executable and an installer. Both `.xlsx` and legacy `.xls`
-> are read. No local-server GUI yet, so the command line is the only way in.
+> report, batch mode and the CLI, with the suite kept green in CI — and it now
+> builds to a single Windows executable and an installer. Both `.xlsx` and
+> legacy `.xls` are read. No local-server GUI yet, so the command line is the
+> only way in.
 
 ---
 
