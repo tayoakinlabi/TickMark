@@ -20,11 +20,13 @@ import argparse
 import contextlib
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 from tickmark import __version__
 from tickmark.checks.registry import run_audit
 from tickmark.checks.stale_values import Coverage
+from tickmark.config.file import CONFIG_NAME, ConfigError, find_config, load_config
 from tickmark.config.rules import DEFAULT_RULES, Rules
 from tickmark.findings.model import Finding, Severity
 from tickmark.report.html_report import render_report, render_summary_index
@@ -109,6 +111,37 @@ def _print_coverage(coverage: Coverage) -> None:
         print("      (this workbook stores no calculated values to compare against)")
 
 
+def _rules_from(args: argparse.Namespace) -> Rules:
+    """Settings from the config file, with command-line flags layered on top.
+
+    Precedence is deliberate and one-directional: the file holds what a team
+    agrees on, the flags hold what one person wants for one run. A flag that
+    could be silently overridden by a file checked in beside the workbooks would
+    be worse than no flag at all.
+    """
+    rules = DEFAULT_RULES
+    path: Path | None = None
+
+    if not args.no_config:
+        path = args.config or find_config(args.target)
+        if args.config is not None and not args.config.is_file():
+            raise ConfigError(f"no config file at {args.config}")
+
+    if path is not None:
+        rules, warnings = load_config(path)
+        print(f"using {path}")
+        for warning in warnings:
+            # Printed, never fatal: a broken rule costs the user that rule.
+            print(f"  config: {warning}", file=sys.stderr)
+
+    replacements: dict[str, object] = {}
+    if args.include_integers:
+        replacements["report_integer_constants"] = True
+    if args.no_evaluate:
+        replacements["evaluate_formulas"] = False
+    return replace(rules, **replacements) if replacements else rules
+
+
 def _threshold(name: str) -> int:
     """Severity rank at or above which the exit code becomes non-zero.
 
@@ -156,6 +189,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="skip check 10, which recomputes simple formulas (the slowest check)",
     )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help=f"settings and custom rules (default: nearest {CONFIG_NAME}, searching upwards)",
+    )
+    parser.add_argument(
+        "--no-config",
+        action="store_true",
+        help=f"ignore any {CONFIG_NAME} that would otherwise be found",
+    )
     parser.add_argument("-q", "--quiet", action="store_true", help="suppress per-finding output")
     parser.add_argument("--version", action="version", version=f"tickmark {__version__}")
     return parser
@@ -188,12 +231,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"nothing to audit at {args.target}", file=sys.stderr)
         return _EXIT_NOTHING_AUDITED
 
-    rules = DEFAULT_RULES
-    if args.include_integers or args.no_evaluate:
-        rules = Rules(
-            report_integer_constants=args.include_integers,
-            evaluate_formulas=not args.no_evaluate,
-        )
+    try:
+        rules = _rules_from(args)
+    except ConfigError as exc:
+        print(f"{exc}", file=sys.stderr)
+        return _EXIT_NOTHING_AUDITED
 
     output_dir = args.output if args.output and args.output.is_dir() else None
     if args.output and not args.output.suffix and not args.output.exists():

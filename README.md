@@ -96,6 +96,46 @@ trust faster than one that quietly misses things.
 
 Switch it off with `--no-evaluate` if you only want the structural checks.
 
+## House rules
+
+Settings and your own checks live in `tickmark.toml`, found beside the workbook
+or in any folder above it — so one file at the top of a shared drive covers
+everything under it.
+
+```toml
+[rules]
+# Literals to treat as innocuous, on top of the built-in list
+ignored_numbers = [0, 1, 2, 12, 100]
+complexity_limit = 5
+
+[[rule]]
+name = "no-hardcoded-vat"
+severity = "high"                 # high | medium | low | info
+pattern = '\*\s*1\.075'          # a regular expression
+summary = "Hardcoded VAT rate — use the Rates sheet"
+explanation = "Finance agreed in March that the rate lives in Rates!B1."
+
+[[rule]]
+name = "no-todo-left"
+target = "value"                  # match the cell's value instead of its formula
+pattern = 'TODO|FIXME'
+summary = "Unfinished note left in the workbook"
+```
+
+A rule is a regular expression plus the wording the report should use — not an
+expression language. That is a deliberate limit: a declarative rule is a spec to
+parse, an expression language is a language to maintain, and only one of those
+is finishable.
+
+**A mistake in this file costs you that line and nothing else.** A rule with no
+pattern, an unknown severity, or a regex that does not compile is reported by
+name and skipped, and the rest of the audit runs normally. Only a file that is
+not valid TOML stops the run. Unknown settings are ignored, so a config written
+for a later version still works on an older build.
+
+`--config PATH` points at a specific file; `--no-config` ignores any that would
+otherwise be found. Command-line flags always win over the file.
+
 ## Speed
 
 Measured, not promised. A generated workbook of **50 sheets and 100,700

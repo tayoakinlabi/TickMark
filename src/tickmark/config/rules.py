@@ -12,7 +12,31 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Any
 
-__all__ = ["Rules", "DEFAULT_RULES"]
+__all__ = ["CustomRule", "Rules", "DEFAULT_RULES"]
+
+
+@dataclass(frozen=True, slots=True)
+class CustomRule:
+    """A check a user wrote themselves (item 19).
+
+    Deliberately one shape rather than a language: a regular expression matched
+    against a cell's formula or its value, with the wording the report will use.
+    Item 30's reasoning applies here too — a declarative rule is a spec to parse,
+    while an expression language is a language to maintain, and the second is how
+    a finishable project stops being one.
+
+    ``target`` is ``"formula"`` or ``"value"``. Matching values is what makes
+    rules like "flag any cell still saying TODO" possible without a second
+    mechanism.
+    """
+
+    name: str
+    pattern: str
+    summary: str
+    severity: str = "medium"
+    explanation: str = ""
+    target: str = "formula"
+
 
 # Literals that carry no business meaning. A formula containing *100 or /12 is
 # doing arithmetic, not hiding a rate; flagging those is how a check becomes
@@ -88,6 +112,10 @@ class Rules:
     # fact about the file rather than a judgement about it. Switchable because
     # it is the one check that costs real time on a large workbook.
     evaluate_formulas: bool = True
+    # Item 19. Empty unless a config file supplies some; the built-in checks
+    # never depend on these, so a broken rule costs the user their own rule and
+    # nothing else.
+    custom_rules: tuple[CustomRule, ...] = ()
 
     def is_ignored_number(self, value: float) -> bool:
         return value in self.ignored_numbers
@@ -123,6 +151,10 @@ class Rules:
             updates["complexity_limit"] = int(value)
         if (value := data.get("evaluate_formulas")) is not None:
             updates["evaluate_formulas"] = bool(value)
+        if (rules := data.get("custom_rules")) is not None:
+            updates["custom_rules"] = tuple(
+                r if isinstance(r, CustomRule) else CustomRule(**r) for r in rules
+            )
 
         return replace(base, **updates)
 

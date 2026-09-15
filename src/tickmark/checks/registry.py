@@ -14,6 +14,7 @@ from tickmark.checks.base import SheetCheck, WorkbookCheck
 from tickmark.checks.broken_refs import BrokenRefsCheck
 from tickmark.checks.circular_refs import CircularRefsCheck
 from tickmark.checks.complexity import ComplexityCheck
+from tickmark.checks.custom import CustomRulesCheck
 from tickmark.checks.double_counting import DoubleCountingCheck
 from tickmark.checks.external_links import ExternalLinksCheck
 from tickmark.checks.hardcoded_constants import HardcodedConstantsCheck
@@ -45,6 +46,9 @@ def build_sheet_checks(rules: Rules = DEFAULT_RULES) -> list[SheetCheck]:
         ShortRangeCheck(),
         DoubleCountingCheck(),
         *([StaleValuesCheck()] if rules.evaluate_formulas else []),
+        # Item 19, last so a user's rule never displaces a built-in finding in
+        # the grouping pass.
+        *([CustomRulesCheck(rules)] if rules.custom_rules else []),
     ]
 
 

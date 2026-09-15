@@ -317,6 +317,8 @@ def _external_indexes(tokens: bytes, xti: list[tuple[int, int, int]]) -> list[in
     if any(index < 0 or index >= len(xti) for index in found):
         return None
     return found
+
+
 _QUOTED = re.compile(r'"(?:[^"]|"")*"')
 _FLOAT_LITERAL = re.compile(r"(?<![\w.$])(\d+)\.0(?![\d.eE])")
 _DEGENERATE_RANGE = re.compile(r"(\$?[A-Z]{1,3}\$?\d+):(\$?[A-Z]{1,3}\$?\d+)")
