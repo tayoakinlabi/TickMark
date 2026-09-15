@@ -21,6 +21,7 @@ sample would show "this workbook stores no calculated values to compare against"
 
 from __future__ import annotations
 
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -136,6 +137,14 @@ def _cached(path: Path, values: dict[str, str]) -> None:
     openpyxl writes a formula or a value, never both, so the file it saves looks
     to any reader like a workbook that has never been calculated. Real ones carry
     the last computed result, and check 10 compares against exactly that.
+
+    **The existing empty value element is replaced, not appended to.** openpyxl
+    emits ``<c r="C2"><f>B2*0.2</f><v /></c>``, and inserting another one gave a
+    cell two ``<v>`` elements where at most one is allowed. openpyxl and Tickmark
+    both read that without complaint — they take the first — so the sample passed
+    every check this project has while being a file **Excel refuses to open at
+    all**. Validating a workbook with the library that wrote it proves nothing;
+    :func:`assert_one_value_per_cell` is the guard that does.
     """
     original = path.with_suffix(".tmp.xlsx")
     shutil.move(path, original)
@@ -149,13 +158,42 @@ def _cached(path: Path, values: dict[str, str]) -> None:
             if item.filename.endswith(".xml"):
                 text = data.decode("utf-8")
                 for formula, value in values.items():
-                    fragment = f"<f>{formula}</f>"
-                    if fragment in text:
-                        text = text.replace(fragment, f"{fragment}<v>{value}</v>")
+                    # Swallows whatever value element already follows the
+                    # formula, empty or not, so exactly one survives.
+                    pattern = re.compile(
+                        re.escape(f"<f>{formula}</f>") + r"\s*(?:<v\s*/>|<v>[^<]*</v>)?"
+                    )
+                    text = pattern.sub(lambda _m, f=formula, v=value: f"<f>{f}</f><v>{v}</v>", text)
                 data = text.encode("utf-8")
             target.writestr(item, data)
 
     original.unlink()
+    assert_one_value_per_cell(path)
+
+
+def assert_one_value_per_cell(path: Path) -> None:
+    """Refuse to ship a workbook Excel would reject.
+
+    A cell may hold at most one value element. Two is invalid, and every reader
+    this project uses accepts it anyway — which is precisely why the check has to
+    be explicit rather than implied by "the tests pass". Costs milliseconds,
+    needs no Excel installed, and catches the one way this script can produce a
+    file that opens as blank.
+    """
+    offenders: list[str] = []
+    with zipfile.ZipFile(path) as archive:
+        for name in archive.namelist():
+            if not name.startswith("xl/worksheets/"):
+                continue
+            text = archive.read(name).decode("utf-8")
+            for cell in re.findall(r"<c\b[^>]*>.*?</c>", text):
+                if len(re.findall(r"<v[\s>/]", cell)) > 1:
+                    offenders.append(f"{name}: {cell[:90]}")
+    if offenders:
+        raise SystemExit(
+            "the sample workbook has cells with more than one value element, "
+            "which Excel will refuse to open:\n  " + "\n  ".join(offenders[:5])
+        )
 
 
 def cached_values() -> dict[str, str]:

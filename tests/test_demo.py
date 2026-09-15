@@ -90,6 +90,50 @@ class TestTheCoverageLine:
         assert f"recomputed {audited.coverage.compared} of {audited.coverage.total}" in text
 
 
+class TestExcelCanOpenIt:
+    """The check that was missing, and that shipping without cost a broken download.
+
+    The sample was validated with openpyxl and with Tickmark — the two libraries
+    least able to catch the problem, because both tolerate what was wrong with
+    it. It had two value elements in one cell, where at most one is allowed. Both
+    readers took the first and carried on; Excel refused to open the file at all,
+    so the workbook published as a download opened blank.
+
+    Excel cannot be installed in CI, so what is asserted here is the specific
+    invalidity rather than "Excel opens it". That is narrower than the real
+    property but it is checkable everywhere, and it is the one way this script
+    can produce a corrupt file.
+    """
+
+    def test_no_cell_has_two_values(self, tmp_path: Path):
+        path = tmp_path / "book.xlsx"
+        demo.build_workbook(path)
+        demo._cached(path, demo.cached_values())
+        demo.assert_one_value_per_cell(path)  # raises SystemExit if it regresses
+
+    def test_the_published_copy_is_valid(self):
+        published = ROOT / "docs" / "quarterly-accounts.xlsx"
+        if not published.exists():  # pragma: no cover - built by demo/build_demo.py
+            pytest.skip("the sample has not been built")
+        demo.assert_one_value_per_cell(published)
+
+    def test_the_guard_catches_a_real_double_value(self, tmp_path: Path):
+        """Prove the guard fails on the exact corruption that shipped."""
+        import zipfile
+
+        path = tmp_path / "book.xlsx"
+        demo.build_workbook(path)
+        broken = tmp_path / "broken.xlsx"
+        with zipfile.ZipFile(path) as source, zipfile.ZipFile(broken, "w") as target:
+            for item in source.infolist():
+                data = source.read(item.filename)
+                if item.filename.endswith("sheet1.xml"):
+                    data = data.replace(b"<v />", b"<v>1</v><v />", 1)
+                target.writestr(item, data)
+        with pytest.raises(SystemExit):
+            demo.assert_one_value_per_cell(broken)
+
+
 class TestTheWorkbookIsSafeToHandOut:
     def test_it_has_no_circular_reference(self, audited):
         # Deliberate: Excel warns on opening a file with one, and the sample is
