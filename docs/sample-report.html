@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tickmark — quarterly-accounts.xlsx</title><style>
+:root {
+  --ink: #1a1a1a; --muted: #5c5c5c; --rule: #e0ddd6; --paper: #fbfaf7;
+  --high: #a8321e; --medium: #a8701e; --low: #5c6b3f; --info: #3f5c6b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 2rem 1.25rem 4rem;
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink); background: var(--paper);
+}
+.wrap { max-width: 60rem; margin: 0 auto; }
+h1 { font-size: 1.6rem; margin: 0 0 .2rem; letter-spacing: -.01em; }
+.sub { color: var(--muted); margin: 0 0 2rem; font-size: .9rem; }
+h2 {
+  font-size: 1.05rem; margin: 2.5rem 0 .25rem; padding-bottom: .35rem;
+  border-bottom: 2px solid var(--rule); letter-spacing: -.01em;
+}
+h2 .count { color: var(--muted); font-weight: 400; }
+.blurb { color: var(--muted); font-size: .85rem; margin: .4rem 0 1rem; }
+.tiles { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
+.tile {
+  flex: 1 1 8rem; border: 1px solid var(--rule); border-radius: 6px;
+  padding: .7rem .9rem; background: #fff;
+}
+.tile .n { font-size: 1.5rem; font-weight: 600; line-height: 1.1; }
+.tile .l {
+  color: var(--muted); font-size: .78rem;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.tile.high .n { color: var(--high); } .tile.medium .n { color: var(--medium); }
+.tile.low .n { color: var(--low); }  .tile.info .n { color: var(--info); }
+.finding {
+  border: 1px solid var(--rule); border-left: 4px solid var(--rule);
+  border-radius: 5px; background: #fff; padding: .8rem 1rem; margin-bottom: .7rem;
+  break-inside: avoid; page-break-inside: avoid;
+}
+.finding.high { border-left-color: var(--high); }
+.finding.medium { border-left-color: var(--medium); }
+.finding.low { border-left-color: var(--low); }
+.finding.info { border-left-color: var(--info); }
+.finding .head { display: flex; flex-wrap: wrap; gap: .6rem; align-items: baseline; }
+.loc {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-weight: 600; font-size: .9rem;
+}
+.summary { font-weight: 600; }
+.check {
+  margin-left: auto; color: var(--muted); font-size: .72rem;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+pre {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  background: #f4f2ed; border: 1px solid var(--rule); border-radius: 4px;
+  padding: .45rem .6rem; margin: .55rem 0 .4rem; font-size: .85rem;
+  overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+}
+.why { color: var(--muted); font-size: .88rem; margin: 0; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--rule); }
+th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.note {
+  border: 1px solid var(--rule); border-radius: 6px; background: #fff;
+  padding: .9rem 1.1rem; font-size: .88rem; color: var(--muted);
+}
+.note strong { color: var(--ink); }
+.clean { border: 1px solid var(--rule); border-radius: 6px; background: #fff; padding: 1.4rem; }
+footer { margin-top: 3rem; color: var(--muted); font-size: .78rem; }
+@media print {
+  body { background: #fff; padding: 0; font-size: 11pt; }
+  .tile, .finding, .note, table { break-inside: avoid; }
+  h2 { break-after: avoid; }
+  footer { position: fixed; bottom: 0; }
+}
+</style></head><body><div class="wrap"><h1>quarterly-accounts.xlsx</h1><p class="sub">Spreadsheet audit &middot; 15 September 2026 at 07:58 &middot; 41 formulas across 3 sheets</p><div class="tiles"><div class="tile high"><div class="n">6</div><div class="l">Needs attention</div></div><div class="tile medium"><div class="n">7</div><div class="l">Worth checking</div></div><div class="tile low"><div class="n">1</div><div class="l">Minor</div></div><div class="tile info"><div class="n">1</div><div class="l">For information</div></div></div><h2>Needs attention <span class="count">&middot; 6</span></h2><p class="blurb">Likely to be producing a wrong number right now.</p><div class="finding high"><div class="head"><span class="loc">Q3 Invoices!B18</span><span class="summary">Range stops short: B15:B16 left out</span><span class="check">short-range</span></div><pre>=SUM(B2:B14)</pre><p class="why">This formula covers B2:B14, but the data in that column continues at B15:B16. 2 rows of figures are missing from the total. Usually this means rows were added and the formula was never extended to reach them.</p></div><div class="finding high"><div class="head"><span class="loc">Q3 Invoices!C9</span><span class="summary">Constant in a column of formulas</span><span class="check">inconsistent-range</span></div><p class="why">Every other cell in this column holds a formula, but this one holds the fixed value 246. That usually means a formula was typed over by hand, and it will not update when the inputs change.</p></div><div class="finding high"><div class="head"><span class="loc">Summary!B6</span><span class="summary">Stored value 33538 does not match the formula, which gives 35378</span><span class="check">stale-value</span></div><pre>=B4+B5</pre><p class="why">The number saved in this cell is not what its formula computes. Usually the workbook was changed and never recalculated, so the figure on screen is out of date. Press F9 in Excel and check whether this cell moves.</p></div><div class="finding high"><div class="head"><span class="loc">Summary!B13</span><span class="summary">Double counting: B11 is a subtotal inside this range</span><span class="check">double-counting</span></div><pre>=SUM(B9:B12)</pre><p class="why">This SUM covers B9:B12, which includes B11 — and B11 is itself a total of B9:B10. Those cells are counted twice: once directly and once through the subtotal. The result is too high, and nothing about either formula looks wrong on its own.</p></div><div class="finding high"><div class="head"><span class="loc">Summary!B17</span><span class="summary">External link to a file that is not there</span><span class="check">external-link</span></div><pre>=&#x27;[FY2024 Accounts.xlsx]Summary&#x27;!B6</pre><p class="why">This formula reads from C:\Users\victo\Documents\Office_based_software\tickmark\demo\FY2024 Accounts.xlsx, which does not exist at that location. The cell will keep showing the value it last saw, so the number can look current while being stale.</p></div><div class="finding high"><div class="head"><span class="loc">Summary!B19</span><span class="summary">#REF! written into the formula</span><span class="check">broken-reference</span></div><pre>=B6-#REF!</pre><p class="why">This cell points at a cell that no longer exists, usually because a row, column or sheet was deleted. The error is part of the formula text, so it will not go away on recalculation — the formula itself needs repairing.</p></div><h2>Worth checking <span class="count">&middot; 7</span></h2><p class="blurb">Probably fine, but worth confirming.</p><div class="finding medium"><div class="head"><span class="loc">Q3 Invoices!C2:C8</span><span class="summary">Hardcoded value 0.2 inside a formula (7 cells)</span><span class="check">hardcoded-constant</span></div><pre>=B2*0.2</pre><p class="why">This formula contains the fixed number 0.2. If that is a rate, price or threshold, it should live in its own labelled cell that formulas point at — otherwise changing it means finding every formula that mentions it, and one will be missed.</p></div><div class="finding medium"><div class="head"><span class="loc">Q3 Invoices!C10:C16</span><span class="summary">Hardcoded value 0.2 inside a formula (7 cells)</span><span class="check">hardcoded-constant</span></div><pre>=B10*0.2</pre><p class="why">This formula contains the fixed number 0.2. If that is a rate, price or threshold, it should live in its own labelled cell that formulas point at — otherwise changing it means finding every formula that mentions it, and one will be missed.</p></div><div class="finding medium"><div class="head"><span class="loc">Summary!B15</span><span class="summary">Hardcoded value 0.075 inside a formula</span><span class="check">hardcoded-constant</span></div><pre>=IF(B4&gt;75000,MIN(B4*0.075,12000),IF(B4&gt;50000,MIN(B4*0.06,9000),IF(B4&gt;25000,MIN(B4*0.045,6000),IF(B4&gt;10000,MIN(B4*0.035,3000),IF(B4&gt;0,B4*0.02,0)))))</pre><p class="why">This formula contains the fixed number 0.075. If that is a rate, price or threshold, it should live in its own labelled cell that formulas point at — otherwise changing it means finding every formula that mentions it, and one will be missed.</p></div><div class="finding medium"><div class="head"><span class="loc">Summary!B15</span><span class="summary">Hardcoded value 0.06 inside a formula</span><span class="check">hardcoded-constant</span></div><pre>=IF(B4&gt;75000,MIN(B4*0.075,12000),IF(B4&gt;50000,MIN(B4*0.06,9000),IF(B4&gt;25000,MIN(B4*0.045,6000),IF(B4&gt;10000,MIN(B4*0.035,3000),IF(B4&gt;0,B4*0.02,0)))))</pre><p class="why">This formula contains the fixed number 0.06. If that is a rate, price or threshold, it should live in its own labelled cell that formulas point at — otherwise changing it means finding every formula that mentions it, and one will be missed.</p></div><div class="finding medium"><div class="head"><span class="loc">Summary!B15</span><span class="summary">Hardcoded value 0.045 inside a formula</span><span class="check">hardcoded-constant</span></div><pre>=IF(B4&gt;75000,MIN(B4*0.075,12000),IF(B4&gt;50000,MIN(B4*0.06,9000),IF(B4&gt;25000,MIN(B4*0.045,6000),IF(B4&gt;10000,MIN(B4*0.035,3000),IF(B4&gt;0,B4*0.02,0)))))</pre><p class="why">This formula contains the fixed number 0.045. If that is a rate, price or threshold, it should live in its own labelled cell that formulas point at — otherwise changing it means finding every formula that mentions it, and one will be missed.</p></div><div class="finding medium"><div class="head"><span class="loc">Summary!B15</span><span class="summary">Hardcoded value 0.035 inside a formula</span><span class="check">hardcoded-constant</span></div><pre>=IF(B4&gt;75000,MIN(B4*0.075,12000),IF(B4&gt;50000,MIN(B4*0.06,9000),IF(B4&gt;25000,MIN(B4*0.045,6000),IF(B4&gt;10000,MIN(B4*0.035,3000),IF(B4&gt;0,B4*0.02,0)))))</pre><p class="why">This formula contains the fixed number 0.035. If that is a rate, price or threshold, it should live in its own labelled cell that formulas point at — otherwise changing it means finding every formula that mentions it, and one will be missed.</p></div><div class="finding medium"><div class="head"><span class="loc">Summary!B15</span><span class="summary">Hardcoded value 0.02 inside a formula</span><span class="check">hardcoded-constant</span></div><pre>=IF(B4&gt;75000,MIN(B4*0.075,12000),IF(B4&gt;50000,MIN(B4*0.06,9000),IF(B4&gt;25000,MIN(B4*0.045,6000),IF(B4&gt;10000,MIN(B4*0.035,3000),IF(B4&gt;0,B4*0.02,0)))))</pre><p class="why">This formula contains the fixed number 0.02. If that is a rate, price or threshold, it should live in its own labelled cell that formulas point at — otherwise changing it means finding every formula that mentions it, and one will be missed.</p></div><h2>Minor <span class="count">&middot; 1</span></h2><p class="blurb">Not wrong, but untidy or slow.</p><div class="finding low"><div class="head"><span class="loc">Summary!B2</span><span class="summary">Volatile function: TODAY</span><span class="check">volatile-function</span></div><pre>=TODAY()</pre><p class="why">TODAY returns today&#x27;s date, so it changes daily. Volatile functions force Excel to recalculate this cell — and everything that depends on it — every time anything in the workbook changes. A few are harmless; many are why a workbook feels slow.</p></div><h2>For information <span class="count">&middot; 1</span></h2><p class="blurb">Notes about how the workbook is built.</p><div class="finding info"><div class="head"><span class="loc">Summary!B15</span><span class="summary">Complex formula (nested 7 levels deep and 147 characters long)</span><span class="check">formula-complexity</span></div><pre>=IF(B4&gt;75000,MIN(B4*0.075,12000),IF(B4&gt;50000,MIN(B4*0.06,9000),IF(B4&gt;25000,MIN(B4*0.045,6000),IF(B4&gt;10000,MIN(B4*0.035,3000),IF(B4&gt;0,B4*0.02,0)))))</pre><p class="why">This formula is nested 7 levels deep and 147 characters long. Nothing is necessarily wrong with it, but whoever has to change it next will struggle to be sure they have not broken it. Splitting it across helper cells usually costs nothing and makes it checkable.</p></div><h2>How much was arithmetically verified</h2><div class="note"><p><strong>37 of 41 formulas</strong> were recomputed and checked against the value stored beside them (90% were within the evaluated subset).</p><p>4 formulas could not be verified. Tickmark evaluates only arithmetic and a short list of functions — SUM, AVERAGE, MIN, MAX, COUNT, COUNTA, ROUND, ROUNDUP, ROUNDDOWN and ABS — over numeric cells. Anything else is left alone rather than guessed at. <strong>An unverified formula has not been checked for arithmetic; it is not a formula that passed.</strong></p></div><h2>What is in this workbook</h2><table><thead><tr><th>Sheet</th><th>Used range</th><th class="num">Cells</th><th class="num">Formulas</th><th>Notes</th></tr></thead><tbody><tr><td>Q3 Invoices</td><td>A1:D18</td><td class="num">68</td><td class="num">32</td><td></td></tr><tr><td>Summary</td><td>A1:B19</td><td class="num">26</td><td class="num">9</td><td></td></tr><tr><td>Rates</td><td>A1:B2</td><td class="num">4</td><td class="num">0</td><td>hidden</td></tr></tbody></table><h2>What this audit does not cover</h2><div class="note"><ul style="margin:0;padding-left:1.1rem"><li>Most arithmetic. Tickmark recomputes only simple formulas — see the coverage figure above for how many in this workbook, and treat the rest as unchecked.</li><li>Anything inside VBA macros. Their presence is reported; their contents are never parsed.</li><li>Google Sheets, Numbers, and <code>.xlsb</code>. (<code>.xls</code> and <code>.xlsx</code> are both read.)</li><li>Whether a formula matches what the business actually intended.</li></ul></div><footer>Generated by Tickmark 0.2.0. Runs entirely on your machine — no data left it.</footer></div></body></html>

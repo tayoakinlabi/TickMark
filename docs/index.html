@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tickmark — see what a spreadsheet audit actually finds</title>
+    <meta
+      name="description"
+      content="A sample Tickmark report on a deliberately broken quarterly accounts workbook. Nothing to install."
+    />
+    <style>
+      :root {
+        --ink: #16191d;
+        --muted: #5b6470;
+        --line: #e2e6ea;
+        --page: #f7f8fa;
+        --card: #fff;
+        --high: #b3261e;
+        --medium: #a8620a;
+        --low: #2c5aa0;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 0 1.25rem 5rem;
+        background: var(--page);
+        color: var(--ink);
+        font: 16px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+      main, header, footer { max-width: 46rem; margin: 0 auto; }
+      header { padding: 4rem 0 1rem; }
+      h1 { font-size: 2.1rem; margin: 0 0 .5rem; letter-spacing: -.02em; }
+      h2 { font-size: 1.25rem; margin: 2.75rem 0 .75rem; }
+      .lede { font-size: 1.15rem; color: var(--muted); margin: 0; }
+      .cta {
+        display: inline-block;
+        margin: 1.75rem 0 .5rem;
+        padding: .85rem 1.6rem;
+        background: var(--ink);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+      .cta:hover { background: #000; }
+      .cta-note { color: var(--muted); font-size: .9rem; margin: .35rem 0 0; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 1.25rem 1.5rem;
+        margin: 1rem 0;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+      th, td { text-align: left; padding: .5rem .4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+      tr:last-child td { border-bottom: 0; }
+      .sev {
+        display: inline-block; padding: .08rem .4rem; border-radius: 4px;
+        font-size: .7rem; font-weight: 700; text-transform: uppercase; color: #fff;
+      }
+      .sev.high { background: var(--high); }
+      .sev.medium { background: var(--medium); }
+      code { font-family: Consolas, "Cascadia Mono", monospace; font-size: .88em; }
+      .cell { font-family: Consolas, "Cascadia Mono", monospace; white-space: nowrap; font-size: .85rem; }
+      .quote {
+        border-left: 3px solid var(--low);
+        padding: .1rem 0 .1rem 1rem;
+        margin: 1.25rem 0;
+        color: var(--ink);
+      }
+      pre {
+        background: #fff; border: 1px solid var(--line); border-radius: 6px;
+        padding: .8rem 1rem; overflow-x: auto; font-size: .86rem;
+      }
+      footer { margin-top: 3.5rem; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+      a { color: var(--low); }
+      ul { padding-left: 1.2rem; }
+      li { margin: .3rem 0; }
+      @media (max-width: 480px) { header { padding-top: 2.5rem; } h1 { font-size: 1.7rem; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Tickmark</h1>
+      <p class="lede">
+        Point it at a folder of Excel files. Get a report of every inconsistent
+        formula, hardcoded constant, broken link and silent error — before they
+        cost you.
+      </p>
+      <a class="cta" href="sample-report.html">See a sample report &rarr;</a>
+      <p class="cta-note">
+        Real output, nothing to install. Opens in this tab.
+      </p>
+    </header>
+
+    <main>
+      <h2>What you are looking at</h2>
+      <p>
+        That report is an audit of
+        <a href="quarterly-accounts.xlsx">a quarterly accounts workbook</a>
+        we broke on purpose — fifteen invoices, a summary, a hidden rates sheet.
+        It is the kind of file that exists in every small business.
+      </p>
+      <p>
+        <strong>Every fault in it looks completely normal on the sheet.</strong>
+        That is the point. Nothing is red, nothing says <code>#VALUE!</code>,
+        every individual formula reads correctly. Here is some of what came back:
+      </p>
+
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Where</th><th></th><th>What</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cell">C9</td>
+              <td><span class="sev high">high</span></td>
+              <td>Someone typed <code>246.00</code> over the VAT formula. The column still looks like a column of formulas. That row stopped updating months ago.</td>
+            </tr>
+            <tr>
+              <td class="cell">B18</td>
+              <td><span class="sev high">high</span></td>
+              <td>The total sums <code>B2:B14</code>. Two rows were added underneath and it never grew to meet them.</td>
+            </tr>
+            <tr>
+              <td class="cell">B13</td>
+              <td><span class="sev high">high</span></td>
+              <td>The regional total sweeps a block that already contains a subtotal of part of it, so those rows are counted twice. Every formula involved is correct on its own.</td>
+            </tr>
+            <tr>
+              <td class="cell">B6</td>
+              <td><span class="sev high">high</span></td>
+              <td>The number saved in the cell is not what its formula computes. Calculation was switched off, a figure moved, and the file was sent anyway.</td>
+            </tr>
+            <tr>
+              <td class="cell">B17</td>
+              <td><span class="sev high">high</span></td>
+              <td>A link to last year's workbook, which is no longer where it was. The cell keeps showing the value it last saw.</td>
+            </tr>
+            <tr>
+              <td class="cell">B15</td>
+              <td><span class="sev medium">medium</span></td>
+              <td>Five commission rates buried inside one formula, seven levels deep. Nobody is going to inherit that safely.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>It tells you what it did not check</h2>
+      <p>
+        Every report carries a line like this, and it is the thing that most
+        separates Tickmark from the tools that cost thousands:
+      </p>
+      <pre>recomputed 37 of 41 formulas · 4 fell outside the evaluated subset</pre>
+      <p class="quote">
+        A tool that silently checks two-thirds of a workbook lets you believe it
+        checked all of it. <strong>An unverified formula has not been checked.
+        It is not a formula that passed.</strong>
+      </p>
+      <p>
+        Tickmark recomputes a small, closed set — arithmetic plus
+        <code>SUM</code>, <code>AVERAGE</code>, <code>MIN</code>,
+        <code>MAX</code>, <code>COUNT</code>, <code>COUNTA</code>,
+        <code>ROUND</code>, <code>ROUNDUP</code>, <code>ROUNDDOWN</code> and
+        <code>ABS</code> — and refuses everything else by name rather than
+        guessing at it. Then it tells you how much that covered.
+      </p>
+
+      <h2>Where it runs</h2>
+      <ul>
+        <li><strong>Entirely on your machine.</strong> No model, no network, no API key, no account. Nothing is uploaded.</li>
+        <li><strong>It never writes to your workbooks.</strong> Reports only, no auto-fixing.</li>
+        <li>Reads <code>.xlsx</code>, <code>.xlsm</code>, <code>.xltx</code>, <code>.xltm</code> and legacy <code>.xls</code> — no conversion, no Excel installation needed.</li>
+        <li>A command line for scheduled jobs, and a browser interface for everyone else.</li>
+        <li>Free and open source, Apache-2.0.</li>
+      </ul>
+
+      <h2>Try it</h2>
+      <p>
+        <a href="https://github.com/tayoakinlabi/TickMark/releases/latest">Download the latest release</a>
+        — an installer, or a single executable that needs nothing installed.
+      </p>
+      <p>
+        <strong>Builds are not yet code-signed</strong>, so Windows will tell you
+        the publisher is unknown. That warning is accurate and you should treat
+        any unsigned installer with the caution it deserves. Every release
+        publishes a SHA-256 you can check before running it. Signing comes once
+        there is a public release history to apply with.
+      </p>
+      <p>
+        Prefer to run from source? <code>uv tool install git+https://github.com/tayoakinlabi/TickMark</code>
+      </p>
+    </main>
+
+    <footer>
+      <p>
+        <a href="https://github.com/tayoakinlabi/TickMark">Source on GitHub</a> ·
+        <a href="https://github.com/tayoakinlabi/TickMark/blob/main/CHANGELOG.md">Changelog</a> ·
+        <a href="https://github.com/tayoakinlabi/TickMark/issues/new/choose">Report a problem</a>
+      </p>
+      <p>
+        Found a finding that is wrong? That is the most useful report this
+        project gets — a check that flags correct work loses trust faster than
+        one that quietly misses things.
+      </p>
+    </footer>
+  </body>
+</html>
