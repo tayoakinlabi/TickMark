@@ -26,12 +26,14 @@ dependencies = [
     # olefile reads the OLE container the BIFF stream lives in.
     "xlrd>=2.0.1",
     "olefile>=0.47",
+    # The local-server GUI (NF 2, item 12). A hard dependency rather than an
+    # extra because the product ships both entry points in one installer — but
+    # the engine must never import it. See tests/test_layering.py, which fails
+    # the build if anything under workbook/, formula/, graph/, checks/ or
+    # report/ grows a web dependency: the CLI has to work with no server.
+    "fastapi>=0.115",
+    "uvicorn>=0.34",
 ]
-
-# No optional extras. A 'server' extra pulling FastAPI and uvicorn was declared
-# here before the local-server UI (item 12) existed; installing two dependencies
-# that nothing imports is a promise the package does not keep. It comes back with
-# the code that needs it.
 
 [project.scripts]
 tickmark = "tickmark.cli.main:main"
@@ -46,6 +48,9 @@ dev = [
     # formulas or cached values, which is why one Excel-authored binary is
     # committed alongside — see tests/fixtures/.
     "xlwt>=1.3",
+    # Drives the FastAPI app in-process, so the server is tested without a
+    # browser or a real socket (05-architecture.md, integration tests).
+    "httpx>=0.27",
 ]
 
 [build-system]

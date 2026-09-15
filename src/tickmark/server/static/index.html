@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tickmark</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Tickmark</h1>
+      <p class="sub">
+        Everything happens on this machine. Nothing is uploaded, and nothing is
+        written to the workbooks you audit.
+      </p>
+    </header>
+
+    <main>
+      <form id="audit-form" autocomplete="off">
+        <label for="path">Workbook or folder</label>
+        <div class="row">
+          <input
+            type="text"
+            id="path"
+            name="path"
+            spellcheck="false"
+            placeholder="C:\Shared\Finance   or   C:\Shared\Finance\accounts.xlsx"
+            required
+          />
+          <button type="submit" id="run">Audit</button>
+        </div>
+        <p class="hint">
+          Copy the path from the address bar in File Explorer. Reads
+          <code>.xlsx</code>, <code>.xlsm</code>, <code>.xltx</code>,
+          <code>.xltm</code> and legacy <code>.xls</code>.
+        </p>
+
+        <fieldset class="options">
+          <legend>Options</legend>
+          <label><input type="checkbox" id="recursive" /> Include subfolders</label>
+          <label><input type="checkbox" id="evaluate" checked /> Recompute simple formulas</label>
+          <label><input type="checkbox" id="include-integers" /> Flag whole-number constants</label>
+        </fieldset>
+      </form>
+
+      <section id="status" class="status" hidden></section>
+      <section id="warnings" class="warnings" hidden></section>
+      <section id="results" hidden></section>
+    </main>
+
+    <footer>
+      <p>
+        Findings are not a clean bill of health. Read the coverage line: an
+        unverified formula has not been checked, it is not a formula that passed.
+      </p>
+    </footer>
+
+    <template id="file-template">
+      <article class="file">
+        <header class="file-head">
+          <h2 class="file-name"></h2>
+          <div class="tiles"></div>
+          <a class="report-link" target="_blank" rel="noopener">Open full report</a>
+        </header>
+        <p class="coverage"></p>
+        <table class="findings">
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>Where</th>
+              <th>What</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

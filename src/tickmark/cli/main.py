@@ -162,7 +162,22 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         epilog="Tickmark never writes to an audited workbook.",
     )
-    parser.add_argument("target", type=Path, help="a .xlsx file, or a folder of them")
+    parser.add_argument(
+        "target",
+        type=Path,
+        nargs="?",
+        help="a workbook, or a folder of them (omit it when using --serve)",
+    )
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="open the browser interface instead of auditing from the terminal",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="with --serve, print the address instead of opening a browser",
+    )
     parser.add_argument(
         "-o",
         "--output",
@@ -224,7 +239,19 @@ def _make_output_safe() -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     _make_output_safe()
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.serve:
+        # Imported here, not at module scope: the engine and the CLI must work
+        # with no web dependency loaded at all, and a user who never opens the
+        # browser interface should not pay to import FastAPI.
+        from tickmark.server.launch import serve
+
+        return serve(open_browser=not args.no_browser)
+
+    if args.target is None:
+        parser.error("give a workbook or folder to audit, or pass --serve")
 
     paths = _discover(args.target, recursive=args.recursive)
     if not paths:

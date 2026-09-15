@@ -23,26 +23,40 @@ hiddenimports = (
     collect_submodules("openpyxl")
     + collect_submodules("xlrd")
     + collect_submodules("olefile")
+    # uvicorn resolves its protocol and lifespan implementations by name at
+    # runtime, so a frozen build without these starts and then fails to serve.
+    + collect_submodules("uvicorn")
 )
+
+# The browser UI. These are data, not code, so nothing in the import graph pulls
+# them in: without this the frozen build starts a server that 404s its own page.
+# The smoke test in build.py exists partly to catch exactly this class of
+# omission before a release goes out.
+datas = [("../src/tickmark/server/static", "tickmark/server/static")]
 
 analysis = Analysis(
     ["entry.py"],
     pathex=["../src"],
     binaries=[],
-    datas=[],
+    datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
-    # Tickmark has no GUI and no scientific stack. Excluding these keeps the
-    # binary near 15 MB instead of dragging in tkinter and friends, and a
-    # smaller download is a real adoption factor for a tool people try once.
+    # Tickmark has no desktop GUI and no scientific stack. Excluding these keeps
+    # the download small, which is a real adoption factor for a tool people try
+    # once.
+    #
+    # 'http' and 'email' were on this list and have been removed: uvicorn imports
+    # http.HTTPStatus at module scope and starlette reaches for email.utils, so
+    # excluding them produced an executable that audited fine from the terminal
+    # and died the instant anyone passed --serve. The build's server smoke test
+    # is what caught it; nothing in the test suite could, because from source
+    # those modules are simply present.
     excludes=[
         "tkinter",
         "unittest",
         "pydoc",
         "doctest",
-        "email",
-        "http",
         "xmlrpc",
         "pdb",
         "numpy",

@@ -9,11 +9,9 @@ commercial equivalents are enterprise-priced.
 
 [![CI](https://github.com/tayoakinlabi/TickMark/actions/workflows/ci.yml/badge.svg)](https://github.com/tayoakinlabi/TickMark/actions/workflows/ci.yml)
 
-> **Status: pre-alpha.** The audit engine is finished — ten checks, the HTML
-> report, batch mode and the CLI, with the suite kept green in CI — and it now
-> builds to a single Windows executable and an installer. Both `.xlsx` and
-> legacy `.xls` are read. No local-server GUI yet, so the command line is the
-> only way in.
+> **Status: pre-alpha.** Ten checks, a browser interface and a command line over
+> the same engine, `.xlsx` and legacy `.xls` alike, house rules in
+> `tickmark.toml`, and a Windows installer. The suite is kept green in CI.
 
 ---
 
@@ -157,6 +155,33 @@ same workbook in the same process, switching it off takes the audit from 15.0s
 to 12.9s warm — so `--no-evaluate` is worth having on a very large batch, and
 not worth thinking about otherwise.
 
+## The browser interface
+
+```
+tickmark --serve
+```
+
+Opens a page at `127.0.0.1` on a port picked at startup. Paste a path, get the
+findings, open the full report. Same engine as the command line — a workbook
+audited in the browser and in the terminal cannot disagree.
+
+**It is not reachable by anything but you.** That is not the same as "it only
+listens on localhost", which is a weaker claim than it sounds: any website you
+visit can make requests to `127.0.0.1`, and through DNS rebinding can do so
+believing it is same-origin. Both arrive *from* loopback, so checking the source
+address proves nothing. Instead:
+
+- a fresh token every launch, in the link Tickmark opens, exchanged for a
+  `SameSite=Strict` cookie and then dropped from the address bar
+- a `Host` allowlist, which is what actually stops DNS rebinding
+- an `Origin` allowlist, a CSP that forbids every external origin, and no inline
+  script anywhere
+- bound to `127.0.0.1`, never `0.0.0.0` — the machine next to yours cannot see it
+
+Nothing is uploaded and nothing is written to the workbooks. Closing the terminal
+window stops the server. Starting it twice reopens the window already running
+instead of a second server.
+
 ## Use
 
 ```
@@ -169,7 +194,8 @@ tickmark accounts.xlsx --include-integers  # also flag whole-number constants
 tickmark C:\Shared\Finance -r -q       # totals only, no per-finding output
 ```
 
-`--version` prints the version. Auditing a folder of more than one workbook also
+`--serve` opens the browser interface; add `--no-browser` to print the address
+instead. `--version` prints the version. Auditing a folder of more than one workbook also
 writes `tickmark-summary.html` next to the reports.
 
 Tickmark reads `.xlsx`, `.xlsm`, `.xltx`, `.xltm` and the legacy binary `.xls`

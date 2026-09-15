@@ -125,7 +125,77 @@ def smoke_test(exe: Path) -> None:
         if audit.returncode == 2:
             raise SystemExit(f"the built executable cannot audit a workbook: {audit.stderr}")
         print("smoke test: audited the legacy fixture")
+
+    _smoke_test_server(exe)
     print("smoke test: ok")
+
+
+def _smoke_test_server(exe: Path) -> None:
+    """Start the frozen server and fetch its page.
+
+    The browser UI is data rather than code, so nothing in the import graph
+    would notice it missing: PyInstaller would happily build an executable that
+    serves 404 for its own interface, and every test would still pass because
+    the tests run from source where the files are simply there. The only way to
+    catch that is to run the built binary and ask it for the page.
+    """
+    import json
+    import os
+    import time
+    import urllib.request
+
+    process = subprocess.Popen(
+        [str(exe), "--serve", "--no-browser"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    lock = Path(os.environ.get("LOCALAPPDATA", "")) / "Tickmark" / "server.json"
+    try:
+        details = None
+        for _ in range(60):  # up to ~15s; a frozen start is slower than a source one
+            time.sleep(0.25)
+            try:
+                details = json.loads(lock.read_text(encoding="utf-8"))
+                break
+            except (OSError, ValueError):
+                continue
+        if details is None:
+            raise SystemExit("the built executable did not start its server")
+
+        base = f"http://127.0.0.1:{details['port']}"
+        request = urllib.request.Request(base + "/")
+        request.add_header("Cookie", f"tickmark_session={details['token']}")
+
+        # Retried even though the lockfile is now written from the server's own
+        # startup hook: a frozen binary on a cold filesystem is slow, and a
+        # build that fails on a timing wobble teaches people to rerun it rather
+        # than to read it.
+        page = ""
+        last: Exception | None = None
+        for _ in range(20):
+            try:
+                with urllib.request.urlopen(request, timeout=20) as response:
+                    page = response.read().decode("utf-8", "replace")
+                break
+            except Exception as exc:  # noqa: BLE001 - retried, then reported
+                last = exc
+                time.sleep(0.5)
+        if not page:
+            raise SystemExit(f"the built executable did not serve its page: {last}")
+        if "<title>Tickmark</title>" not in page:
+            raise SystemExit("the built executable served a page without the UI in it")
+
+        for asset in ("/app.js", "/style.css"):
+            with urllib.request.urlopen(base + asset, timeout=20) as response:
+                if not response.read():
+                    raise SystemExit(f"the built executable served an empty {asset}")
+        print("smoke test: served the browser UI")
+    finally:
+        process.terminate()
+        with contextlib.suppress(Exception):
+            process.wait(timeout=10)
+        with contextlib.suppress(OSError):
+            lock.unlink(missing_ok=True)
 
 
 def build_installer(version: str) -> Path | None:

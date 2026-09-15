@@ -1,0 +1,313 @@
+/* Deliberately plain. This is a tool somebody opens, points at a folder, reads,
+   and closes — the severity colours are the only thing here doing real work, and
+   they match the ones in the emailed HTML report so the two never disagree about
+   what "high" looks like. */
+
+:root {
+  --ink: #16191d;
+  --muted: #5b6470;
+  --line: #e2e6ea;
+  --page: #f7f8fa;
+  --card: #ffffff;
+  --high: #b3261e;
+  --medium: #a8620a;
+  --low: #2c5aa0;
+  --info: #5b6470;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0 1.25rem 4rem;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.55 "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+header,
+main,
+footer {
+  max-width: 62rem;
+  margin: 0 auto;
+}
+
+header {
+  padding: 2rem 0 1rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+}
+
+.sub,
+.hint {
+  color: var(--muted);
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+}
+
+form {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.9rem;
+}
+
+input[type="text"]:focus {
+  outline: 2px solid var(--low);
+  outline-offset: 1px;
+}
+
+button {
+  padding: 0.6rem 1.4rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.options {
+  margin: 1rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 0.9rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+}
+
+.options legend {
+  display: none;
+}
+
+.options label {
+  font-weight: 400;
+  margin: 0;
+  color: var(--muted);
+}
+
+.status {
+  margin: 1.25rem 0 0;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid var(--muted);
+  background: var(--card);
+}
+
+.status.working {
+  border-left-color: var(--low);
+}
+.status.found {
+  border-left-color: var(--high);
+}
+.status.clean {
+  border-left-color: #1e7a41;
+}
+.status.error {
+  border-left-color: var(--high);
+  color: var(--high);
+}
+
+.warnings {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  background: #fff8ec;
+  border: 1px solid #f0dcbc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.warnings ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.file {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 1.25rem;
+  overflow: hidden;
+}
+
+.file-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.file-name {
+  margin: 0;
+  font-size: 1.05rem;
+  flex: 1;
+  font-family: Consolas, "Cascadia Mono", monospace;
+}
+
+.tiles {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.tile {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  background: #f1f3f5;
+}
+
+.tile.zero {
+  opacity: 0.4;
+}
+.tile.high strong {
+  color: var(--high);
+}
+.tile.medium strong {
+  color: var(--medium);
+}
+.tile.low strong {
+  color: var(--low);
+}
+
+.report-link {
+  font-size: 0.88rem;
+  color: var(--low);
+}
+
+.coverage {
+  margin: 0;
+  padding: 0.7rem 1.25rem;
+  background: #fbfcfd;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.87rem;
+}
+
+.coverage:empty {
+  display: none;
+}
+
+table.findings {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.findings th,
+.findings td {
+  text-align: left;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.findings th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.findings tr:last-child td {
+  border-bottom: 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--info);
+}
+
+.badge.high {
+  background: var(--high);
+}
+.badge.medium {
+  background: var(--medium);
+}
+.badge.low {
+  background: var(--low);
+}
+
+.where {
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.findings code {
+  display: block;
+  margin-top: 0.3rem;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.82rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.why {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.87rem;
+}
+
+.clean {
+  color: var(--muted);
+}
+
+.unreadable .file-head {
+  border-bottom: 0;
+}
+
+.error {
+  color: var(--high);
+  padding: 0 1.25rem 1rem;
+  margin: 0;
+}
+
+footer {
+  margin-top: 2.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
