@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>What It Didn't Check</title>
+    <meta
+      name="description"
+      content="Spreadsheet auditors either compute nothing or claim to compute everything. There is a third option, and it requires saying out loud how much of your workbook was actually verified."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    />
+    <style>
+      :root {
+        --paper: #f1f4ef;
+        --slab: #e7ece5;
+        --ink: #141a16;
+        --muted: #5c6b60;
+        --rule: #d2dbd2;
+        --verified: #1f5c43;
+        --flag: #9e2f26;
+
+        --serif: "Newsreader", Georgia, "Times New Roman", serif;
+        --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --paper: #101410;
+          --slab: #171d18;
+          --ink: #e4ebe4;
+          --muted: #93a196;
+          --rule: #27302a;
+          --verified: #74c4a0;
+          --flag: #e0918a;
+        }
+      }
+
+      :root[data-theme="dark"] {
+        --paper: #101410;
+        --slab: #171d18;
+        --ink: #e4ebe4;
+        --muted: #93a196;
+        --rule: #27302a;
+        --verified: #74c4a0;
+        --flag: #e0918a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding-block: 0 6rem;
+        padding-inline: 1.5rem;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--serif);
+        font-size: 1.15rem;
+        line-height: 1.72;
+        font-optical-sizing: auto;
+      }
+
+      article,
+      header,
+      footer {
+        max-width: 38rem;
+        margin-inline: auto;
+      }
+
+      header {
+        padding-block: 5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2.1rem, 6vw, 3.1rem);
+        line-height: 1.1;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin: 0;
+        text-wrap: balance;
+      }
+
+      .standfirst {
+        margin: 0;
+        font-size: 1.3rem;
+        line-height: 1.55;
+        color: var(--muted);
+        text-wrap: pretty;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.25;
+        margin: 3.5rem 0 0;
+        text-wrap: balance;
+      }
+
+      h2 + p {
+        margin-top: 0.9rem;
+      }
+
+      p {
+        margin: 1.25rem 0;
+      }
+
+      a {
+        color: var(--verified);
+        text-underline-offset: 0.18em;
+        text-decoration-thickness: 1px;
+      }
+
+      a:focus-visible {
+        outline: 2px solid var(--verified);
+        outline-offset: 3px;
+      }
+
+      code {
+        font-family: var(--mono);
+        font-size: 0.86em;
+        background: var(--slab);
+        padding: 0.08em 0.32em;
+        border-radius: 3px;
+      }
+
+      /* The tool's own output, set as the ledger it is. One ruled slab; the rest
+         of the page stays quiet. */
+      .specimen {
+        font-family: var(--mono);
+        font-size: 0.9rem;
+        line-height: 2;
+        background: var(--slab);
+        background-image: repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent calc(2em - 1px),
+          var(--rule) calc(2em - 1px),
+          var(--rule) 2em
+        );
+        border-left: 2px solid var(--verified);
+        padding: 1rem 1.25rem;
+        margin: 1.75rem 0;
+        overflow-x: auto;
+      }
+
+      .specimen .count {
+        color: var(--verified);
+        font-weight: 500;
+      }
+
+      .specimen .rest {
+        color: var(--flag);
+      }
+
+      /* A tickmark is the mark an auditor puts beside a figure they have
+         checked. It appears once, next to the number that was. */
+      .tick {
+        color: var(--verified);
+        font-weight: 500;
+      }
+
+      blockquote {
+        margin: 2.25rem 0;
+        padding-left: 1.4rem;
+        border-left: 2px solid var(--rule);
+        font-size: 1.32rem;
+        line-height: 1.5;
+        font-style: italic;
+        color: var(--ink);
+        text-wrap: pretty;
+      }
+
+      ul {
+        padding-left: 1.3rem;
+        margin: 1.25rem 0;
+      }
+
+      li {
+        margin: 0.55rem 0;
+        padding-left: 0.2rem;
+      }
+
+      li::marker {
+        color: var(--muted);
+      }
+
+      hr {
+        border: 0;
+        border-top: 1px solid var(--rule);
+        margin: 3.5rem 0 0;
+      }
+
+      footer {
+        margin-top: 2rem;
+        font-size: 0.98rem;
+        color: var(--muted);
+      }
+
+      footer a {
+        color: var(--verified);
+      }
+
+      @media (max-width: 480px) {
+        header {
+          padding-block: 3rem 1.5rem;
+        }
+        body {
+          font-size: 1.08rem;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <p class="eyebrow">On building a spreadsheet auditor</p>
+      <h1>Your spreadsheet auditor should tell you what it didn't check</h1>
+      <p class="standfirst">
+        Tools that check spreadsheets either compute nothing or claim to compute
+        everything. Both let you believe more was verified than was. There is a
+        third option, and it costs you a number you may not want to see.
+      </p>
+    </header>
+
+    <article>
+      <p>
+        A hardcoded VAT rate sat in one cell of a client invoice sheet for two
+        years. The column around it was formulas. The number it produced was
+        plausible. Nobody saw it, because there was nothing to see — no red, no
+        <code>#VALUE!</code>, no broken link. Somebody had typed over one cell in
+        2023 and the sheet had looked perfectly healthy ever since.
+      </p>
+      <p>
+        That is the shape of nearly every expensive spreadsheet error: not a
+        formula that fails, but one that quietly stops being a formula.
+      </p>
+
+      <h2>Two ways to look for it, both of them partial</h2>
+      <p>
+        A tool auditing that workbook has two established options. It can read
+        the formulas as <em>structure</em> — parse them, never compute them — and
+        find the shape problems: a constant in a run of formulas, a
+        <code>SUM</code> that stops one row short of its data, a total that
+        sweeps up a subtotal of its own rows. These are real findings and they
+        need no arithmetic at all.
+      </p>
+      <p>
+        Or it can <em>evaluate</em>: reimplement enough of Excel to recompute the
+        sheet and compare. Two Python libraries have worked at this for years and
+        both still have gaps, which is the first clue about how large the job is.
+      </p>
+      <p>
+        The structural tool will tell you nothing about whether the arithmetic is
+        right. The evaluating tool will tell you about the arithmetic it managed,
+        and typically will not tell you which parts those were. Both hand you a
+        report that reads like a verdict on the whole workbook.
+      </p>
+
+      <h2>Why full evaluation is a trap</h2>
+      <p>
+        Not "a lot of work" — a different product. Implementing Excel semantics
+        means, at minimum:
+      </p>
+      <ul>
+        <li>
+          <strong>500-odd worksheet functions</strong>, each with its own argument
+          coercion.
+        </li>
+        <li>
+          <strong>Coercion rules specific to Excel</strong> — empty string against
+          zero, <code>TRUE</code> as 1, text promoted to number in some argument
+          positions and not others.
+        </li>
+        <li>
+          <strong>Nine error types with per-function propagation.</strong>
+          <code>#N/A</code> passes through <code>IFERROR</code> differently from
+          <code>#VALUE!</code>.
+        </li>
+        <li>
+          <strong>Dates</strong>, including the 1900 leap-year bug Excel
+          deliberately preserves for Lotus compatibility, and the 1900/1904
+          workbook setting that shifts every date by four years.
+        </li>
+        <li>
+          <strong>Floating point as Excel presents it</strong> — IEEE 754 doubles
+          displayed at fifteen significant figures, with special-cased cosmetic
+          correction so that <code>=0.1+0.2-0.3</code> shows zero.
+        </li>
+        <li>
+          <strong>Both array systems</strong>: legacy Ctrl-Shift-Enter arrays and
+          modern dynamic-array spill.
+        </li>
+        <li>
+          <strong>Locale.</strong> Function names and argument separators differ
+          by install language.
+        </li>
+        <li>
+          <strong>Calculation settings</strong>: iterative calculation,
+          precision-as-displayed.
+        </li>
+      </ul>
+      <p>
+        But the size is not the trap. The trap is <em>partial coverage</em>.
+        Evaluate eighty per cent of a workbook, stay quiet about the rest, and no
+        reader can tell which numbers were checked. The report looks the same
+        either way.
+      </p>
+      <p>
+        And there is a worse failure hiding behind it. One coercion bug makes the
+        tool report a discrepancy on a <em>correct</em> workbook. A tool that
+        cries wolf on correct work loses trust faster than one that misses
+        things — because the first wrong alarm is the last time anyone reads the
+        output carefully.
+      </p>
+
+      <h2>The third option</h2>
+      <p>
+        Recompute a small, <em>closed</em> subset. Refuse everything else by name.
+        Then publish the ratio.
+      </p>
+      <p>
+        In Tickmark, the tool I have been building, that subset is the arithmetic
+        operators plus <code>SUM</code>, <code>AVERAGE</code>, <code>MIN</code>,
+        <code>MAX</code>, <code>COUNT</code>, <code>COUNTA</code>,
+        <code>ROUND</code>, <code>ROUNDUP</code>, <code>ROUNDDOWN</code> and
+        <code>ABS</code>, over cells holding numbers. A formula that reaches
+        outside it — a <code>VLOOKUP</code>, an <code>IF</code>, a date, a cell
+        holding text — is declined and counted, never approximated. Every audit
+        ends with a line like this:
+      </p>
+
+      <div class="specimen">
+        <span class="tick">&#10003;</span>
+        <span class="count">recomputed 847 of 1,203 formulas</span><br />
+        <span class="rest">356 fell outside the evaluated subset</span>
+      </div>
+
+      <blockquote>
+        An unverified formula has not been checked. It is not a formula that
+        passed.
+      </blockquote>
+
+      <p>
+        That second number is the one doing the work. It is also the number a
+        marketing department would ask you to remove.
+      </p>
+
+      <h2>What "refuse" has to mean in practice</h2>
+      <p>
+        A closed subset sounds simple until you write it. Four decisions that
+        turned out to matter more than the function list:
+      </p>
+      <p>
+        <strong>Round away from zero, not to even.</strong> Python's
+        <code>round(2.5)</code> is 2. Excel's <code>ROUND(2.5,0)</code> is 3.
+        Shipping the language default would have reported a discrepancy on a
+        correct workbook every single time a value landed exactly on a half —
+        the exact false alarm the whole design is meant to avoid.
+      </p>
+      <p>
+        <strong>Follow Excel's documented range rule; refuse its undocumented
+        scalar one.</strong> <code>=SUM(A1:A3)</code> with text in A2 sums the two
+        numbers — that is documented behaviour, safe to implement, and it is what
+        makes the verified count worth having. <code>=SUM(1,"2")</code> coerces by
+        a different rule, and that rule is precisely the kind of subtlety that
+        produces wrong answers on right workbooks. It is declined.
+      </p>
+      <p>
+        <strong>An aggregate over nothing numeric is refused, not answered.</strong>
+        Excel says <code>SUM</code> of an empty range is zero, and that is true.
+        But in an audit, a range that yielded nothing far more often means the
+        cells could not be read than that somebody totalled emptiness — and a
+        confident zero against a real stored figure is a false alarm with a very
+        convincing face.
+      </p>
+      <p>
+        <strong>Compare with a relative tolerance, near 1e-9.</strong> Too tight
+        and ordinary float noise reads as a discrepancy on correct work. Too loose
+        and a real error slips through. This is a genuine judgement, not a free
+        parameter.
+      </p>
+
+      <h2>Refusing is the feature</h2>
+      <p>
+        Every one of those decisions makes the verified count <em>smaller</em>.
+        That is the point. The number is only worth printing because the refusals
+        are honest — a tool that quietly guesses reports a bigger figure and a
+        worthless one.
+      </p>
+      <p>
+        There is a real temptation to grow the list. Someone asks for
+        <code>IF</code>, then <code>VLOOKUP</code>, then date arithmetic, and each
+        one is individually reasonable. That road ends at a spreadsheet engine
+        that is wrong in ways nobody can predict. The closedness <em>is</em> the
+        discipline; the function list is just where it currently sits.
+      </p>
+
+      <h2>What the honesty buys you</h2>
+      <p>
+        One finding that no structural check can reach: a stored value that
+        contradicts its own formula. Somebody set calculation to manual, an input
+        changed, the sheet was never recalculated, and the file went out with
+        figures that do not match the formulas beside them. There is no cycle, no
+        error, no shape inconsistency. The only evidence is that the stored number
+        and the computed number differ — and you cannot see that without
+        computing one of them.
+      </p>
+      <p>
+        A narrow evaluator finds it. A narrow evaluator that tells you its own
+        limits lets you trust the finding.
+      </p>
+
+      <hr />
+    </article>
+
+    <footer>
+      <p>
+        <strong>Tickmark</strong> audits Excel workbooks for the mistakes that
+        survive review — inconsistent formulas, hardcoded constants, broken links,
+        silent errors. It runs entirely on your machine, reads legacy
+        <code>.xls</code> natively, and never writes to your workbooks.
+      </p>
+      <p>
+        <a href="sample-report.html">See a sample report</a> on a deliberately
+        broken workbook &middot;
+        <a href="index.html">About</a> &middot;
+        <a href="https://github.com/tayoakinlabi/TickMark">Source</a>
+      </p>
+    </footer>
+  </body>
+</html>
